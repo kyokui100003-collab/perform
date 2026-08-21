@@ -237,7 +237,7 @@
 </div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxEv9821OOSjC4Hi8yZdnh2Cn6NG-8topX-j4MhiKUZ-sXHd3GPvZs8PSydl_yAsu4lvQ/exec';
+const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
 
 const role         = sessionStorage.getItem('role');
 const userId       = sessionStorage.getItem('userId');
@@ -254,7 +254,7 @@ document.getElementById('headerInfo').innerHTML =
   (department   ? `　<span style="opacity:0.65">|</span>　${department}`   : '') +
   (facilityName ? `　<span style="opacity:0.65">|</span>　${facilityName}` : '');
 
-const DEMO_MODE = GAS_URL === 'https://script.google.com/macros/s/AKfycbxEv9821OOSjC4Hi8yZdnh2Cn6NG-8topX-j4MhiKUZ-sXHd3GPvZs8PSydl_yAsu4lvQ/exec';
+const DEMO_MODE = GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE';
 
 // 術式リスト：診療科ごとの定型的な術式候補（サシーム先生の方針：NCD術式との厳密な対応は今回は行わない）
 // 候補にない術式は「その他（自由入力）」から入力できる
