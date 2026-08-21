@@ -65,8 +65,8 @@
 // 6. setupDailyTrigger() を1回手動実行
 // ============================================================
 
-const IDENTITY_SHEET_ID = 'YOUR_IDENTITY_SPREADSHEET_ID_HERE';
-const SHEET_ID           = 'YOUR_DATA_SPREADSHEET_ID_HERE';
+const IDENTITY_SHEET_ID = '1KJRe28Z9sJQGRnu3cF_xAJyqzMexiVZSxieZOF7BdqM';
+const SHEET_ID           = '12Dd3f6nfz--l2-P53X3RXOm-oPviVDMPRpYXDHmk5Ow';
 const REG_CODE = 'PERFORM2026';
 const MAX_FAILED = 5;
 const LOCKOUT_MIN = 30;

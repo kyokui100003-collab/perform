@@ -233,7 +233,7 @@
 <div class="toast" id="toast">✅ 保存しました</div>
 
 <script>
-const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxEv9821OOSjC4Hi8yZdnh2Cn6NG-8topX-j4MhiKUZ-sXHd3GPvZs8PSydl_yAsu4lvQ/exec';
 
 const role         = sessionStorage.getItem('role');
 const userId       = sessionStorage.getItem('userId');
@@ -250,7 +250,7 @@ document.getElementById('headerInfo').innerHTML =
   (department   ? `　<span style="opacity:0.65">|</span>　${department}`   : '') +
   (facilityName ? `　<span style="opacity:0.65">|</span>　${facilityName}` : '');
 
-const DEMO_MODE = GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE';
+const DEMO_MODE = GAS_URL === 'https://script.google.com/macros/s/AKfycbxEv9821OOSjC4Hi8yZdnh2Cn6NG-8topX-j4MhiKUZ-sXHd3GPvZs8PSydl_yAsu4lvQ/exec';
 
 const MOCK_RECORDS = [
   { id:'r01', caseNo:'001', learnerId:'usr_l01', learnerName:'田中 太郎', procedure:'腹腔鏡下胆嚢摘出術', status:'reviewed',
