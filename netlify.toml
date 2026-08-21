@@ -1,0 +1,9 @@
+# Netlifyのビルド・配信設定
+# frontendフォルダの中身をそのまま静的サイトとして配信する（ビルド処理は不要）
+
+[build]
+  publish = "frontend"
+  command = ""
+
+# SPA的なルーティングは使っていないため、リダイレクト設定は特に無し。
+# 将来 _redirects や netlify/functions を使う場合はここに追記する。

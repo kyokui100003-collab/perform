@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PERFORM — QRコード管理（管理者用）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    background: #f0f4f8; padding: 32px 16px 60px;
+  }
+  .page-header {
+    max-width: 860px; margin: 0 auto 28px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .page-header .logo { font-size: 24px; font-weight: 800; color: #2c7a4b; }
+  .page-header h1   { font-size: 18px; color: #333; font-weight: 700; }
+  .admin-badge {
+    background: #fef3c7; color: #92400e; font-size: 12px; font-weight: 700;
+    padding: 2px 10px; border-radius: 99px;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 640px) { .container { grid-template-columns: 1fr; } }
+
+  .card {
+    background: white; border-radius: 14px; padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  .card-title {
+    font-size: 15px; font-weight: 700; color: #2c7a4b;
+    margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #e8f5ee;
+  }
+
+  label { display: block; font-size: 13px; color: #555; font-weight: 600; margin-bottom: 5px; }
+  input[type="text"] {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 14px; margin-bottom: 13px; outline: none;
+    transition: border-color 0.2s; font-family: inherit;
+  }
+  input:focus { border-color: #2c7a4b; }
+
+  .add-row-btn {
+    width: 100%; padding: 11px; background: #e8f5ee; color: #2c7a4b;
+    border: 1.5px dashed #9ae6b4; border-radius: 8px;
+    font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 16px;
+    transition: background 0.2s;
+  }
+  .add-row-btn:hover { background: #c6f6d5; }
+
+  .generate-btn {
+    width: 100%; padding: 13px; background: #2c7a4b; color: white;
+    border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .generate-btn:hover { background: #235f3c; }
+
+  /* 生成結果 */
+  .qr-results { max-width: 860px; margin: 24px auto 0; }
+  .qr-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
+  }
+  .qr-item {
+    background: white; border-radius: 12px; padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07); text-align: center;
+  }
+  .qr-item img { width: 180px; height: 180px; margin-bottom: 12px; }
+  .qr-facility { font-size: 15px; font-weight: 700; color: #222; margin-bottom: 4px; }
+  .qr-dept     { font-size: 13px; color: #888; margin-bottom: 10px; }
+  .qr-code-tag { font-size: 12px; color: #666; background: #f0f4f8; padding: 3px 8px; border-radius: 4px; margin-bottom: 12px; display: inline-block; }
+  .dl-btns { display: flex; gap: 8px; justify-content: center; }
+  .dl-btn {
+    padding: 7px 14px; border: none; border-radius: 7px;
+    font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.2s;
+  }
+  .dl-reg  { background: #2c7a4b; color: white; }
+  .dl-reg:hover  { background: #235f3c; }
+  .dl-login{ background: #1a5276; color: white; }
+  .dl-login:hover{ background: #154360; }
+
+  .url-box {
+    background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px;
+    padding: 8px 10px; font-size: 11px; color: #555; word-break: break-all;
+    text-align: left; margin-top: 10px;
+  }
+
+  .settings-card { max-width: 860px; margin: 0 auto 20px; }
+  .settings-card .card { padding: 20px 24px; }
+  .settings-row { display: flex; gap: 12px; }
+  .settings-row > div { flex: 1; }
+
+  .facility-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; }
+  .facility-row input { margin-bottom: 0; }
+  .rm-btn {
+    padding: 10px 12px; background: #fff5f5; color: #e53e3e; border: 1.5px solid #fed7d7;
+    border-radius: 8px; cursor: pointer; font-size: 14px; flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .rm-btn:hover { background: #fed7d7; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="logo">PERFORM</div>
+  <h1>QRコード管理</h1>
+  <span class="admin-badge">管理者専用</span>
+</div>
+
+<!-- 設定セクション -->
+<div class="settings-card">
+  <div class="card">
+    <div class="card-title">基本設定</div>
+    <div class="settings-row">
+      <div>
+        <label>アプリのURL（GASデプロイ後のHTMLホスティングURL）</label>
+        <input type="text" id="baseUrl" placeholder="https://example.com/app" value="">
+      </div>
+      <div>
+        <label>登録コード（GAS の REG_CODE と一致させる）</label>
+        <input type="text" id="regCode" placeholder="PERFORM2026" value="PERFORM2026">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- 施設リスト入力 -->
+  <div class="card">
+    <div class="card-title">施設リスト</div>
+    <div id="facilityRows">
+      <div class="facility-row">
+        <div style="flex:1">
+          <label>施設コード</label>
+          <input type="text" class="fc-input" placeholder="FAC001">
+        </div>
+        <div style="flex:2">
+          <label>施設名</label>
+          <input type="text" class="fn-input" placeholder="○○大学病院">
+        </div>
+        <button class="rm-btn" onclick="removeRow(this)" style="margin-top:22px">✕</button>
+      </div>
+    </div>
+    <button class="add-row-btn" onclick="addRow()">＋ 施設を追加</button>
+    <button class="generate-btn" onclick="generateAll()">QRコードを生成</button>
+  </div>
+
+  <!-- 説明 -->
+  <div class="card">
+    <div class="card-title">配布方法</div>
+    <div style="font-size:14px;color:#555;line-height:1.8">
+      <p style="margin-bottom:12px">各施設に対して<strong>2種類のQRコード</strong>を配布します：</p>
+      <div style="background:#f0faf4;border-radius:8px;padding:14px 16px;margin-bottom:12px">
+        <div style="font-weight:700;color:#2c7a4b;margin-bottom:4px">🟢 登録用QR</div>
+        <div>施設コード・施設名・登録コードが埋め込まれています。<br>ユーザーがスキャンすると登録フォームに自動入力されます。</div>
+      </div>
+      <div style="background:#ebf8ff;border-radius:8px;padding:14px 16px;margin-bottom:12px">
+        <div style="font-weight:700;color:#1a5276;margin-bottom:4px">🔵 ログイン用QR</div>
+        <div>施設コードが埋め込まれています。<br>スキャン後は氏名とPINだけでログインできます。</div>
+      </div>
+      <p style="font-size:12px;color:#aaa">※ 印刷して各施設の担当者に郵送または手渡しすることを推奨します。</p>
+    </div>
+  </div>
+</div>
+
+<!-- QR生成結果 -->
+<div class="qr-results">
+  <div class="qr-grid" id="qrGrid"></div>
+</div>
+
+<script>
+function addRow() {
+  const container = document.getElementById('facilityRows');
+  const div = document.createElement('div');
+  div.className = 'facility-row';
+  div.innerHTML = `
+    <div style="flex:1"><label>施設コード</label><input type="text" class="fc-input" placeholder="FAC002"></div>
+    <div style="flex:2"><label>施設名</label><input type="text" class="fn-input" placeholder="△△病院"></div>
+    <button class="rm-btn" onclick="removeRow(this)" style="margin-top:22px">✕</button>`;
+  container.appendChild(div);
+}
+
+function removeRow(btn) {
+  const rows = document.querySelectorAll('.facility-row');
+  if (rows.length > 1) btn.closest('.facility-row').remove();
+}
+
+function qrUrl(data) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(data)}`;
+}
+
+function generateAll() {
+  const baseUrl  = document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
+  const regCode  = document.getElementById('regCode').value.trim();
+  const grid     = document.getElementById('qrGrid');
+
+  if (!baseUrl) { alert('アプリのURLを入力してください'); return; }
+  if (!regCode)  { alert('登録コードを入力してください'); return; }
+
+  const rows = document.querySelectorAll('.facility-row');
+  const items = [];
+  rows.forEach(row => {
+    const fc = row.querySelector('.fc-input').value.trim();
+    const fn = row.querySelector('.fn-input').value.trim();
+    if (fc && fn) items.push({ fc, fn });
+  });
+
+  if (!items.length) { alert('施設コードと施設名を入力してください'); return; }
+
+  grid.innerHTML = items.map(({ fc, fn }) => {
+    const regLink   = `${baseUrl}/register.html?fc=${encodeURIComponent(fc)}&fn=${encodeURIComponent(fn)}&rc=${encodeURIComponent(regCode)}`;
+    const loginLink = `${baseUrl}/index.html?fc=${encodeURIComponent(fc)}&fn=${encodeURIComponent(fn)}`;
+
+    return `
+    <div class="qr-item" id="item-${fc}">
+      <div class="qr-facility">${fn}</div>
+      <div class="qr-dept" style="margin-bottom:8px"></div>
+      <div style="font-size:12px;font-weight:700;color:#2c7a4b;margin-bottom:4px">登録用QR</div>
+      <img src="${qrUrl(regLink)}" alt="QR登録 ${fn}" id="qr-reg-${fc}">
+      <div class="qr-code-tag">施設コード: ${fc}</div>
+      <div class="dl-btns" style="margin-bottom:12px">
+        <button class="dl-btn dl-reg" onclick="downloadQR('qr-reg-${fc}', '${fn}_登録用QR')">保存</button>
+        <button class="dl-btn" style="background:#f0f4f8;color:#555" onclick="copyUrl('${regLink}')">URLコピー</button>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:#1a5276;margin-bottom:4px">ログイン用QR</div>
+      <img src="${qrUrl(loginLink)}" alt="QRログイン ${fn}" id="qr-login-${fc}">
+      <div class="dl-btns" style="margin-top:6px">
+        <button class="dl-btn dl-login" onclick="downloadQR('qr-login-${fc}', '${fn}_ログイン用QR')">保存</button>
+        <button class="dl-btn" style="background:#f0f4f8;color:#555" onclick="copyUrl('${loginLink}')">URLコピー</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function downloadQR(imgId, filename) {
+  const img = document.getElementById(imgId);
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = filename + '.png';
+  a.target = '_blank';
+  a.click();
+}
+
+function copyUrl(url) {
+  navigator.clipboard.writeText(url).then(() => alert('URLをコピーしました'));
+}
+</script>
+</body>
+</html>

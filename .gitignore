@@ -1,0 +1,11 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# エディタ
+.vscode/
+*.swp
+
+# ローカル環境変数（もし今後追加する場合に備えて）
+.env
+.env.local

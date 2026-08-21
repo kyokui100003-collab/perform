@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PERFORM — 新規登録</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    background: #f0f4f8; min-height: 100vh;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 32px 16px 48px;
+  }
+  .card {
+    background: white; border-radius: 16px; padding: 36px 32px;
+    width: 100%; max-width: 460px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  }
+  .logo { text-align: center; margin-bottom: 24px; }
+  .logo-text { font-size: 26px; font-weight: 800; color: #2ab5a8; letter-spacing: 2px; }
+  .logo-sub  { font-size: 13px; color: #888; margin-top: 4px; }
+  h2 { font-size: 18px; color: #333; margin-bottom: 20px; text-align: center; }
+
+  /* QR自動入力バナー */
+  .qr-banner {
+    background: #e6f7f6; border: 1.5px solid #7dd5cf;
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 18px;
+    font-size: 13px; color: #1d8a80; line-height: 1.6; display: none;
+  }
+  .qr-banner strong { font-size: 15px; display: block; margin-bottom: 2px; }
+
+  .role-btns { display: flex; gap: 12px; margin-bottom: 18px; }
+  .role-btn {
+    flex: 1; padding: 13px; border: 2px solid #ddd; border-radius: 10px;
+    background: white; font-size: 15px; cursor: pointer; transition: all 0.2s; color: #555;
+  }
+  .role-btn.active { border-color: #2ab5a8; background: #e6f7f6; color: #2ab5a8; font-weight: 700; }
+
+  .field { margin-bottom: 15px; }
+  label { display: block; font-size: 13px; color: #555; font-weight: 600; margin-bottom: 5px; }
+  input[type="text"], input[type="email"], select {
+    width: 100%; padding: 12px 14px; border: 1.5px solid #ddd; border-radius: 8px;
+    font-size: 15px; outline: none; transition: border-color 0.2s; font-family: inherit; background: white;
+  }
+  input:focus, select:focus { border-color: #2ab5a8; }
+  input[readonly] { background: #f5f5f5; color: #666; }
+  .required { color: #e53e3e; }
+  .field-divider {
+    font-size: 12px; font-weight: 700; color: #2ab5a8; text-transform: uppercase;
+    letter-spacing: 0.4px; margin: 22px 0 12px; padding-top: 14px; border-top: 1px solid #eee;
+  }
+
+  .btn {
+    width: 100%; padding: 14px; background: #2ab5a8; color: white;
+    border: none; border-radius: 10px; font-size: 16px; font-weight: 700;
+    cursor: pointer; transition: background 0.2s; margin-top: 6px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn:hover:not(:disabled) { background: #1d8a80; }
+  .btn:disabled { background: #aaa; cursor: default; }
+  .spinner {
+    width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white; border-radius: 50%;
+    animation: spin 0.7s linear infinite; display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box {
+    background: #fff5f5; border-left: 3px solid #e53e3e;
+    padding: 10px 13px; border-radius: 0 8px 8px 0;
+    color: #c53030; font-size: 13px; margin-bottom: 14px; display: none;
+  }
+  .back-link { display: block; text-align: center; margin-top: 18px; color: #888; font-size: 13px; text-decoration: none; }
+  .back-link:hover { color: #2ab5a8; }
+
+  /* 完了画面 */
+  .success-panel { display: none; text-align: center; padding: 8px 0; }
+  .success-icon { font-size: 52px; margin-bottom: 14px; }
+  .success-panel h3 { font-size: 20px; color: #2ab5a8; margin-bottom: 10px; }
+  .success-panel p  { font-size: 14px; color: #555; line-height: 1.7; margin-bottom: 8px; }
+  .cred-box {
+    background: #e6f7f6; border: 1.5px solid #7dd5cf; border-radius: 10px;
+    padding: 16px 18px; text-align: left; margin: 16px 0; font-size: 14px; line-height: 2.0;
+  }
+  .cred-box strong { color: #1d8a80; }
+  .login-btn {
+    display: inline-block; margin-top: 14px; padding: 13px 32px;
+    background: #2ab5a8; color: white; border-radius: 10px;
+    font-size: 15px; font-weight: 700; text-decoration: none; transition: background 0.2s;
+  }
+  .login-btn:hover { background: #1d8a80; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-text">PERFORM</div>
+    <div class="logo-sub">手術評価システム</div>
+  </div>
+
+  <div id="formPanel">
+    <h2>新規ユーザー登録</h2>
+    <p style="font-size:12.5px;color:#888;margin:-10px 0 18px;line-height:1.6">
+      指導医の先生は、ご自身の登録に加えて、担当される学習者の分もこのフォームからまとめて登録いただけます（学習者ご本人の入力は不要です）。
+    </p>
+
+    <!-- QRスキャン時：施設情報自動入力バナー -->
+    <div class="qr-banner" id="qrBanner">
+      <strong id="qrFacilityLabel"></strong>
+      施設情報が自動で入力されています。氏名とメールアドレスを入力してください。
+    </div>
+
+    <div class="field" id="regCodeField" style="display:none">
+      <label>登録コード <span class="required">*</span></label>
+      <input type="text" id="regCodeInput" placeholder="石堂さんから共有された登録コード">
+    </div>
+
+    <div class="field">
+      <label>役割 <span class="required">*</span></label>
+      <div class="role-btns">
+        <button class="role-btn active" id="btn-learner"   onclick="selectRole('learner')">学習者</button>
+        <button class="role-btn"        id="btn-evaluator" onclick="selectRole('evaluator')">指導医</button>
+      </div>
+    </div>
+
+    <div class="field" id="facilityNameField">
+      <label>施設名 <span class="required">*</span></label>
+      <input type="text" id="facilityName" placeholder="例：○○大学病院">
+    </div>
+
+    <div class="field">
+      <label>診療科 <span class="required">*</span></label>
+      <input type="text" id="department" placeholder="例：消化器外科">
+    </div>
+
+    <div class="field">
+      <label>氏名 <span class="required">*</span></label>
+      <input type="text" id="name" placeholder="登録する方の氏名（ログインに使用します）">
+    </div>
+
+    <div class="field">
+      <label>メールアドレス <span class="required">*</span></label>
+      <input type="email" id="email" placeholder="通知メールの受信先">
+    </div>
+
+    <div class="field-divider">研究用の背景情報（pilot studyのデータとして利用します）</div>
+
+    <div class="field">
+      <label>性別</label>
+      <select id="gender">
+        <option value="">選択しない</option>
+        <option value="男性">男性</option>
+        <option value="女性">女性</option>
+        <option value="その他・回答しない">その他・回答しない</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>専門医資格の有無</label>
+      <select id="boardCertified">
+        <option value="">選択しない</option>
+        <option value="あり">あり</option>
+        <option value="なし">なし</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>卒後年数（PGY）</label>
+      <input type="text" id="pgy" placeholder="例：5">
+    </div>
+
+    <div class="field" id="procExperienceField">
+      <label>対象術式の執刀経験件数（目安）</label>
+      <input type="text" id="procExperience" placeholder="例：15件程度（大まかな数字で構いません）">
+    </div>
+
+    <div class="field" id="teachingYearsField" style="display:none">
+      <label>指導医としての経験年数</label>
+      <input type="text" id="teachingYears" placeholder="例：8">
+    </div>
+
+    <div class="field">
+      <label>その他（自由記述）</label>
+      <input type="text" id="otherNotes" placeholder="任意で記入してください">
+    </div>
+
+    <div class="error-box" id="errBox"></div>
+
+    <button class="btn" id="regBtn" onclick="doRegister()">
+      <span id="regLabel">登録してメールで認証情報を受け取る</span>
+      <div class="spinner" id="regSpinner"></div>
+    </button>
+    <a href="index.html" class="back-link">← ログイン画面に戻る</a>
+  </div>
+
+  <!-- 完了画面 -->
+  <div class="success-panel" id="successPanel">
+    <div class="success-icon">✅</div>
+    <h3>登録完了</h3>
+    <p>登録したメールアドレスに<br>ログイン情報をお送りしました。</p>
+    <div class="cred-box" id="credBox"></div>
+    <p style="font-size:12px;color:#aaa">※ メールが届かない場合は迷惑メールフォルダをご確認ください。</p>
+    <button class="btn" id="regAnotherBtn" onclick="registerAnother()" style="background:white;color:#2ab5a8;border:1.5px solid #2ab5a8;margin-bottom:10px">＋ 続けてもう一人登録する</button>
+    <a href="index.html" class="login-btn" id="loginLink">ログイン画面へ進む</a>
+  </div>
+</div>
+
+<script>
+const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
+
+let currentRole    = 'learner';
+let qrFacilityCode = '';
+let qrRegCode      = '';
+let qrLoginUrl     = 'index.html';
+
+// -------------------------------------------------------
+// QRコードURLパラメータを自動読み込み
+// -------------------------------------------------------
+window.addEventListener('DOMContentLoaded', () => {
+  const p  = new URLSearchParams(location.search);
+  const fc = p.get('fc') || '';
+  const fn = p.get('fn') || '';
+  const rc = p.get('rc') || '';
+
+  if (fc || fn) {
+    qrFacilityCode = fc.toUpperCase();
+    qrRegCode      = rc;
+    qrLoginUrl     = `index.html?fc=${encodeURIComponent(fc)}&fn=${encodeURIComponent(fn)}`;
+
+    // 施設名を自動入力・読み取り専用にする
+    const fnInput = document.getElementById('facilityName');
+    if (fn) {
+      fnInput.value    = fn;
+      fnInput.readOnly = true;
+    }
+
+    // バナーを表示
+    const banner = document.getElementById('qrBanner');
+    banner.style.display = 'block';
+    document.getElementById('qrFacilityLabel').textContent =
+      fn ? `${fn}（施設コード: ${fc}）` : `施設コード: ${fc}`;
+  }
+  if (!qrRegCode) document.getElementById('regCodeField').style.display = 'block';
+});
+
+function selectRole(role) {
+  currentRole = role;
+  document.getElementById('btn-learner').classList.toggle('active', role === 'learner');
+  document.getElementById('btn-evaluator').classList.toggle('active', role === 'evaluator');
+  document.getElementById('teachingYearsField').style.display = role === 'evaluator' ? 'block' : 'none';
+}
+
+async function gasCall(data) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+function showError(msg) {
+  const el = document.getElementById('errBox');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function doRegister() {
+  const facilityName = document.getElementById('facilityName').value.trim();
+  const department   = document.getElementById('department').value.trim();
+  const name         = document.getElementById('name').value.trim();
+  const email        = document.getElementById('email').value.trim();
+  const gender          = document.getElementById('gender').value;
+  const boardCertified  = document.getElementById('boardCertified').value;
+  const pgy              = document.getElementById('pgy').value.trim();
+  const procExperience   = document.getElementById('procExperience').value.trim();
+  const teachingYears    = document.getElementById('teachingYears').value.trim();
+  const otherNotes       = document.getElementById('otherNotes').value.trim();
+  const regCode = qrRegCode || document.getElementById('regCodeInput')?.value?.trim() || '';
+  document.getElementById('errBox').style.display = 'none';
+
+  if (!facilityName || !department || !name || !email)
+    { showError('すべての項目を入力してください'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    { showError('メールアドレスの形式が正しくありません'); return; }
+  if (!regCode)
+    { showError('登録コードを入力してください'); return; }
+
+  document.getElementById('regBtn').disabled = true;
+  document.getElementById('regSpinner').style.display = 'block';
+  document.getElementById('regLabel').textContent = '登録中...';
+
+  try {
+    const res = await gasCall({
+      action: 'register',
+      regCode,
+      facilityCode: qrFacilityCode,
+      facilityName, department, name, email,
+      role: currentRole,
+      gender, boardCertified, pgy, procExperience, teachingYears, otherNotes
+    });
+    if (!res.success) { showError(res.error); return; }
+
+    document.getElementById('formPanel').style.display = 'none';
+    document.getElementById('credBox').innerHTML =
+      `<strong>役割：</strong>${res.role}<br>` +
+      `<strong>施設名：</strong>${facilityName}<br>` +
+      `<strong>診療科：</strong>${department}<br>` +
+      `<strong>施設コード：</strong>${res.facilityCode}<br>` +
+      `<strong>氏名：</strong>${name}`;
+    document.getElementById('loginLink').href = qrLoginUrl;
+    document.getElementById('successPanel').style.display = 'block';
+  } catch (e) {
+    showError('接続エラーが発生しました。しばらくしてから再試行してください。');
+  } finally {
+    document.getElementById('regBtn').disabled = false;
+    document.getElementById('regSpinner').style.display = 'none';
+    document.getElementById('regLabel').textContent = '登録してメールで認証情報を受け取る';
+  }
+}
+
+function registerAnother() {
+  // 施設名・診療科・登録コードは残し、個人情報だけクリアして次の人を登録できるようにする
+  document.getElementById('name').value = '';
+  document.getElementById('email').value = '';
+  document.getElementById('gender').value = '';
+  document.getElementById('boardCertified').value = '';
+  document.getElementById('pgy').value = '';
+  document.getElementById('procExperience').value = '';
+  document.getElementById('teachingYears').value = '';
+  document.getElementById('otherNotes').value = '';
+  document.getElementById('successPanel').style.display = 'none';
+  document.getElementById('formPanel').style.display = 'block';
+}
+</script>
+</body>
+</html>

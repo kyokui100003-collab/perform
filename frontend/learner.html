@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PERFORM — 学習者</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #f0f4f8; min-height: 100vh; padding-bottom: 48px; }
+
+  header { background: #2c3e50; color: white; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .logo { font-size: 20px; font-weight: 900; letter-spacing: 2px; }
+  .logo span { color: #2ab5a8; }
+  .user-info { font-size: 12px; opacity: 0.9; margin-top: 3px; }
+  .role-badge { display: inline-block; background: rgba(255,255,255,0.25); border-radius: 4px; padding: 1px 7px; font-size: 11px; font-weight: 700; margin-right: 6px; }
+  .mode-badge { display: inline-block; background: #d98e30; border-radius: 4px; padding: 1px 7px; font-size: 10px; font-weight: 700; margin-left: 6px; }
+  .logout-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+
+  .tab-bar { background: #1d8a80; display: flex; padding: 0 16px; }
+  .tab-btn { background: none; border: none; color: rgba(255,255,255,0.6); padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
+  .tab-btn.active { color: white; border-bottom-color: #a7f3c4; }
+  .badge-count { display: none; background: #e53e3e; color: white; font-size: 10px; font-weight: 700; border-radius: 99px; padding: 1px 6px; margin-left: 5px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .sub-tab-bar { background: #f0f4f8; border-bottom: 1px solid #dde; display: flex; padding: 0 16px; max-width: 640px; margin: 0 auto; }
+  .sub-tab-btn { background: none; border: none; color: #888; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; font-family: inherit; }
+  .sub-tab-btn.active { color: #2ab5a8; border-bottom-color: #2ab5a8; }
+  .sub-panel { display: none; }
+  .sub-panel.active { display: block; }
+
+  .container { max-width: 640px; margin: 0 auto; padding: 20px 16px; }
+
+  .card { background: white; border-radius: 14px; padding: 22px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .card-title { font-size: 15px; font-weight: 700; color: #2ab5a8; margin-bottom: 14px; padding-bottom: 9px; border-bottom: 2px solid #d0f0ed; display: flex; align-items: center; justify-content: space-between; }
+  label { display: block; font-size: 13px; color: #555; font-weight: 600; margin-bottom: 5px; }
+  input[type="text"], input[type="date"], textarea, select { width: 100%; padding: 11px 13px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 13px; outline: none; font-family: inherit; transition: border-color 0.2s; background: white; box-sizing: border-box; }
+  input[type="text"], input[type="date"], select { height: 46px; }
+  textarea { height: auto; resize: vertical; min-height: 85px; }
+  input:focus, textarea:focus, select:focus { border-color: #2ab5a8; }
+  input[readonly], textarea[readonly] { background: #f5f5f5; color: #888; }
+  .row { display: flex; gap: 12px; } .row > div { flex: 1; min-width: 0; }
+  .required { color: #e53e3e; }
+  .hint { font-size: 11px; color: #999; margin: -8px 0 12px; line-height: 1.5; }
+  .radio-group { display: flex; gap: 6px; flex-wrap: nowrap; margin-bottom: 13px; }
+  .radio-opt { flex: 1; min-width: 0; text-align: center; cursor: pointer; }
+  .radio-opt input { display: none; }
+  .radio-opt span { display: block; padding: 9px 4px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; color: #555; transition: all 0.15s; user-select: none; line-height: 1.3; }
+  .radio-opt input:checked + span { background: #2ab5a8; border-color: #2ab5a8; color: white; font-weight: 700; }
+  .osats-item { margin-bottom: 18px; }
+  .osats-item h4 { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .osats-anchor-row { display: flex; gap: 5px; margin-bottom: 5px; }
+  .osats-anchor-row span { flex: 1; font-size: 10px; color: #aaa; text-align: center; line-height: 1.3; min-height: 20px; }
+  .osats-anchor-row span.has-anchor { color: #888; font-weight: 600; }
+  .osats-scale { display: flex; gap: 5px; }
+  .osats-scale label { margin: 0; flex: 1; text-align: center; }
+  .osats-scale input { display: none; }
+  .osats-scale span { display: block; padding: 10px 4px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 16px; font-weight: 700; color: #888; cursor: pointer; transition: all 0.15s; text-align: center; }
+  .osats-scale input:checked + span { background: #2ab5a8; border-color: #2ab5a8; color: white; }
+  .submit-btn { width: 100%; padding: 15px; background: #2ab5a8; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .submit-btn:hover:not(:disabled) { background: #1d8a80; }
+  .submit-btn:disabled { background: #aaa; cursor: default; }
+  .submit-btn.secondary { background: white; color: #2ab5a8; border: 1.5px solid #2ab5a8; }
+  .submit-btn.secondary:hover:not(:disabled) { background: #f0faf9; }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .submit-btn { margin-top: 0; }
+  .text-link-btn { background: none; border: none; color: #2ab5a8; font-size: 13px; font-weight: 700; cursor: pointer; padding: 4px 0; }
+
+  /* 症例一覧（下書き／結果） */
+  .result-card { background: white; border-radius: 12px; padding: 17px 20px; margin-bottom: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); cursor: pointer; transition: box-shadow 0.15s, transform 0.1s; }
+  .result-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.12); transform: translateY(-1px); }
+  .rc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+  .rc-name { font-size: 16px; font-weight: 700; color: #222; }
+  .badge-done { background: #b2ead6; color: #1d8a80; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+  .badge-draft { background: #fff3cd; color: #92400e; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+  .badge-pending { background: #ebf8ff; color: #2b6cb0; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+  .badge-goal { background: #e6f7f6; color: #1d8a80; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-left: 6px; }
+  .badge-new-flag { background: #e53e3e; color: white; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 99px; margin-left: 6px; letter-spacing: 0.5px; }
+  .rc-meta { font-size: 13px; color: #888; }
+  .empty-msg { text-align: center; color: #aaa; padding: 36px 20px; font-size: 14px; }
+  .loading-bar { text-align: center; padding: 36px; color: #888; font-size: 14px; }
+  .error-box { background: #fff5f5; border-left: 3px solid #e53e3e; padding: 11px 14px; border-radius: 0 8px 8px 0; color: #c53030; font-size: 13px; margin-bottom: 12px; }
+  .section-label { font-size: 13px; font-weight: 700; color: #888; margin: 18px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .section-label:first-child { margin-top: 0; }
+
+  /* 目標ボックス */
+  .goal-box { background: #f0faf9; border: 1.5px solid #b2ead6; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  .goal-box .goal-label { font-size: 11px; font-weight: 700; color: #1d8a80; text-transform: uppercase; margin-bottom: 5px; }
+  .goal-box .goal-text { font-size: 14px; color: #333; white-space: pre-wrap; line-height: 1.6; }
+  .goal-mode-tag { display: inline-block; font-size: 10px; background: #d0f0ed; color: #1d8a80; padding: 2px 7px; border-radius: 99px; margin-left: 6px; font-weight: 700; }
+
+  /* グラフセクション */
+  .chart-controls { background: white; border-radius: 14px; padding: 18px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .chart-controls label { font-size: 13px; font-weight: 700; color: #555; margin-bottom: 6px; }
+  .chart-controls select { margin-bottom: 0; }
+  .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+  @media (min-width: 400px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+  .stat-box { background: white; border-radius: 10px; padding: 12px 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .stat-val  { font-size: 22px; font-weight: 800; margin-bottom: 3px; }
+  .stat-label{ font-size: 11px; color: #888; line-height: 1.3; }
+  .stat-l { color: #2b6cb0; }
+  .stat-e { color: #1d8a80; }
+  .chart-card { background: white; border-radius: 14px; padding: 20px 18px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .chart-card h3 { font-size: 14px; font-weight: 700; color: #555; margin-bottom: 14px; }
+  .chart-wrap { position: relative; width: 100%; }
+  .no-data-msg { text-align: center; color: #aaa; padding: 28px; font-size: 14px; }
+  .match-bar { background: #f0f4f8; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #555; margin-bottom: 14px; }
+  .match-bar span { font-weight: 700; color: #2ab5a8; }
+
+  /* 結果詳細モーダル */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200; overflow-y: auto; padding: 20px 0 40px; }
+  .modal-overlay.show { display: block; }
+  .modal { background: white; border-radius: 16px; max-width: 620px; margin: 0 auto; width: 94%; overflow: hidden; }
+  .modal-hdr { background: #2ab5a8; color: white; padding: 17px 22px; display: flex; align-items: center; justify-content: space-between; }
+  .modal-hdr h2 { font-size: 16px; }
+  .close-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; line-height: 1; }
+  .modal-body { padding: 22px; }
+  .sec-hdr { font-size: 13px; font-weight: 700; color: #2ab5a8; border-bottom: 2px solid #d0f0ed; padding-bottom: 7px; margin: 16px 0 12px; display: flex; align-items: center; justify-content: space-between; }
+  .cmp-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 14px; }
+  .cmp-table th { background: #f0f4f8; padding: 7px 9px; text-align: left; font-size: 11px; font-weight: 700; color: #666; }
+  .cmp-table td { padding: 8px 9px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  .cmp-table tr:last-child td { border-bottom: none; }
+  .chip-l { display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:700;background:#ebf8ff;color:#2b6cb0; }
+  .chip-e { display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:700;background:#fdeceb;color:#c0392b; }
+  .num-l  { display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:14px;font-weight:700;background:#ebf8ff;color:#2b6cb0; }
+  .num-e  { display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:14px;font-weight:700;background:#fdeceb;color:#c0392b; }
+  .fb-box { padding: 10px 12px; border-radius: 0 8px 8px 0; font-size: 13px; color: #444; white-space: pre-wrap; margin-bottom: 10px; }
+  .fb-l { background:#ebf8ff; border-left: 3px solid #63b3ed; }
+  .fb-e { background:#fdeceb; border-left: 3px solid #f1a9a0; }
+  .fb-mini-label { font-size: 11px; font-weight: 700; margin-bottom: 3px; text-transform: uppercase; }
+  .fb-mini-good { color: #1d8a80; }
+  .fb-mini-goal { color: #b8720f; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .info-item label { font-size: 11px; color: #999; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
+  .info-item span  { font-size: 14px; color: #222; font-weight: 600; }
+
+  /* コメント編集可能表示 */
+  .edit-comment-btn { background: none; border: none; color: #2ab5a8; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .edit-window-note { font-size: 10px; color: #aaa; margin-top: -6px; margin-bottom: 10px; }
+
+  /* ディスカッション（掲示板） */
+  .thread { margin-top: 6px; }
+  .thread-item { display: flex; gap: 10px; margin-bottom: 14px; }
+  .thread-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white; flex-shrink: 0; }
+  .thread-avatar.learner { background: #3182ce; }
+  .thread-avatar.evaluator { background: #c0392b; }
+  .thread-body { flex: 1; min-width: 0; }
+  .thread-name { font-size: 12.5px; font-weight: 700; color: #333; }
+  .thread-time { font-size: 10.5px; color: #aaa; margin-left: 6px; font-weight: 400; }
+  .thread-text { font-size: 13.5px; color: #333; margin: 3px 0 5px; white-space: pre-wrap; line-height: 1.5; }
+  .thread-like-btn { background: none; border: none; font-size: 12px; color: #999; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 2px 0; }
+  .thread-like-btn.liked { color: #e53e3e; font-weight: 700; }
+  .thread-input-row { display: flex; gap: 8px; margin-top: 12px; }
+  .thread-input-row textarea { flex: 1; min-height: 42px; margin-bottom: 0; resize: none; padding: 10px 12px; }
+  .thread-send-btn { background: #2ab5a8; color: white; border: none; border-radius: 8px; padding: 0 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .thread-empty { font-size: 12.5px; color: #aaa; padding: 6px 0 10px; }
+
+  /* コメント品質評価（★） */
+  .rate-box { background: #fffaf0; border: 1.5px solid #fbd38d; border-radius: 10px; padding: 14px 16px; margin-top: 16px; text-align: center; }
+  .rate-box .rate-q { font-size: 13px; color: #7b5a17; font-weight: 700; margin-bottom: 8px; }
+  .star-row { display: flex; justify-content: center; gap: 6px; }
+  .star-btn { background: none; border: none; font-size: 26px; cursor: pointer; color: #ddd; transition: color 0.15s; }
+  .star-btn.active, .star-btn:hover { color: #f6ad55; }
+  .rate-done { font-size: 12.5px; color: #92400e; font-weight: 700; }
+  .rate-privacy-note { font-size: 10.5px; color: #a58a5a; margin-top: 8px; }
+
+  /* 完了モーダル */
+  .success-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 300; }
+  .success-overlay.show { display: flex; }
+  .success-card { background: white; border-radius: 16px; padding: 34px 30px; text-align: center; max-width: 320px; width: 90%; }
+  .success-icon { font-size: 48px; margin-bottom: 12px; }
+  .success-card h3 { font-size: 19px; color: #2ab5a8; margin-bottom: 8px; }
+  .success-card p  { font-size: 14px; color: #666; margin-bottom: 18px; line-height: 1.6; }
+  .ok-btn { padding: 11px 30px; background: #2ab5a8; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; }
+
+  .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: #2c3e50; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 400; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">PERF<span>O</span>RM</div>
+    <div class="user-info" id="headerInfo"></div>
+  </div>
+  <button class="logout-btn" onclick="logout()">ログアウト</button>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('form')">症例</button>
+  <button class="tab-btn"       onclick="switchTab('results')">結果<span class="badge-count" id="newResultsBadge"></span></button>
+</div>
+
+<!-- ===== 症例タブ ===== -->
+<div class="tab-panel active" id="tab-form">
+  <div class="container" id="formContainer"><div class="loading-bar">読み込み中...</div></div>
+</div>
+
+<!-- ===== 結果タブ ===== -->
+<div class="tab-panel" id="tab-results">
+  <div class="sub-tab-bar">
+    <button class="sub-tab-btn active" onclick="switchSubTab('list')">一覧</button>
+    <button class="sub-tab-btn"        onclick="switchSubTab('chart')">推移グラフ</button>
+  </div>
+  <div class="container">
+    <div class="sub-panel active" id="sub-list">
+      <div id="resultsList"><div class="loading-bar">読み込み中...</div></div>
+    </div>
+    <div class="sub-panel" id="sub-chart">
+      <div id="chartSection"><div class="loading-bar">読み込み中...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 結果詳細モーダル -->
+<div class="modal-overlay" id="resultModal">
+  <div class="modal">
+    <div class="modal-hdr"><h2 id="resultModalTitle">評価結果</h2><button class="close-btn" onclick="closeResultModal()">×</button></div>
+    <div class="modal-body" id="resultModalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 送信完了 -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-card">
+    <div class="success-icon">✅</div>
+    <h3 id="successTitle">送信完了</h3>
+    <p id="successMsg">指導医にメールで通知されました。<br>評価が完了したらメールでお知らせします。</p>
+    <button class="ok-btn" onclick="afterSubmit()">症例一覧に戻る</button>
+  </div>
+</div>
+
+<script>
+const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
+
+const role         = sessionStorage.getItem('role');
+const userId       = sessionStorage.getItem('userId');
+const userName     = sessionStorage.getItem('userName');
+const facilityCode = sessionStorage.getItem('facilityCode');
+const facilityName = sessionStorage.getItem('facilityName') || '';
+const department   = sessionStorage.getItem('department')   || '';
+const pin          = sessionStorage.getItem('pin');
+
+if (role !== 'learner' || !userId) location.href = 'index.html';
+
+document.getElementById('headerInfo').innerHTML =
+  `<span class="role-badge">学習者</span>${userName}` +
+  (department   ? `　<span style="opacity:0.65">|</span>　${department}`   : '') +
+  (facilityName ? `　<span style="opacity:0.65">|</span>　${facilityName}` : '');
+
+const DEMO_MODE = GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE';
+
+// 術式リスト：診療科ごとの定型的な術式候補（サシーム先生の方針：NCD術式との厳密な対応は今回は行わない）
+// 候補にない術式は「その他（自由入力）」から入力できる
+const PROCEDURES = {
+  '消化器外科': ['腹腔鏡下胆嚢摘出術','腹腔鏡下虫垂切除術','腹腔鏡下結腸切除術','腹腔鏡下直腸切除術','腹腔鏡下胃切除術','鼠径ヘルニア修復術'],
+  '産婦人科':   ['腹腔鏡下子宮全摘術','腹腔鏡下卵巣嚢腫摘出術','帝王切開術'],
+  '呼吸器外科': ['胸腔鏡下肺葉切除術','胸腔鏡下縦隔腫瘍摘出術'],
+  '泌尿器科':   ['腹腔鏡下（ロボット支援）前立腺全摘術','経尿道的膀胱腫瘍切除術（TURBT）'],
+  '形成外科':   ['遊離皮弁再建術','熱傷デブリードマン'],
+};
+
+function buildDeptOptions() {
+  return Object.keys(PROCEDURES).map(d => `<option value="${d}">${d}</option>`).join('')
+    + `<option value="__other_dept__">その他（上記にない診療科）</option>`;
+}
+function buildProcedureOptionsForDept(dept) {
+  if (!dept || !PROCEDURES[dept]) return '';
+  return PROCEDURES[dept].map(p => `<option value="${p}">${p}</option>`).join('')
+    + `<option value="__custom__">その他（自由入力）</option>`;
+}
+
+const MOCK_EVALUATORS = [{ userId:'usr_e01', name:'山田 花子', department:'消化器外科' }];
+const MOCK_RECORDS = [
+  { id:'r01', caseNo:'001', procedure:'腹腔鏡下胆嚢摘出術', status:'reviewed', preOpGoal:'クリッピングの手技を安定させる', goalEntryMode:'preop',
+    learnerAutonomy:2, learnerPerformance:2, learnerDifficulty:2, learnerTS:{ts1:2,ts2:2,ts3:3,ts4:2,ts5:2},
+    learnerFeedbackGood:'視野展開は意識できた', learnerFeedbackGoal:'クリッピングに時間がかかった。次は落ち着いて行いたい。',
+    evaluatorAutonomy:2, evaluatorPerformance:3, evaluatorDifficulty:2, evaluatorTS:{ts1:3,ts2:2,ts3:3,ts4:3,ts5:3},
+    evaluatorFeedbackGood:'基本操作は良好でした。', evaluatorFeedbackGoal:'視野展開の工夫を次回意識してみましょう。', commentRating:null, isNew:true },
+  { id:'r02', caseNo:'002', procedure:'腹腔鏡下胆嚢摘出術', status:'pending', preOpGoal:'', goalEntryMode:'',
+    learnerAutonomy:2, learnerPerformance:3, learnerDifficulty:2, learnerTS:{ts1:3,ts2:3,ts3:3,ts4:3,ts5:2},
+    learnerFeedbackGood:'前回より落ち着いて操作できた。', learnerFeedbackGoal:'次はもっと早く。',
+    evaluatorAutonomy:null, evaluatorPerformance:null, evaluatorDifficulty:null, evaluatorTS:{}, evaluatorFeedbackGood:'', evaluatorFeedbackGoal:'' },
+];
+const MOCK_DRAFTS = [
+  { id:'d01', caseNo:'003', procedure:'腹腔鏡下胆嚢摘出術', evaluatorId:'usr_e01', evaluatorName:'山田 花子', preOpGoal:'器具操作をスムーズに行う', goalEntryMode:'preop', createdAt:new Date().toISOString() }
+];
+
+async function gasCall(data) {
+  if (DEMO_MODE) return mockGasCall(data);
+  const res = await fetch(GAS_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data) });
+  return res.json();
+}
+
+let mockDraftStore = [...MOCK_DRAFTS];
+function mockGasCall(data) {
+  return new Promise(resolve => setTimeout(() => {
+    if (data.action === 'getEvaluators') resolve({ success:true, evaluators: MOCK_EVALUATORS });
+    else if (data.action === 'getMyDrafts') resolve({ success:true, drafts: mockDraftStore });
+    else if (data.action === 'startCase') {
+      const d = { id:'d'+Date.now(), caseNo:String(mockDraftStore.length+4).padStart(3,'0'), procedure:data.procedure, evaluatorId:data.evaluatorId, evaluatorName:'山田 花子', preOpGoal:data.goal||'', goalEntryMode: data.goal?'preop':'', createdAt:new Date().toISOString() };
+      mockDraftStore.push(d);
+      resolve({ success:true, id:d.id, caseNo:d.caseNo });
+    }
+    else if (data.action === 'submitLearner') {
+      mockDraftStore = mockDraftStore.filter(d => d.id !== data.recordId);
+      resolve({ success:true, id:'r_new_'+Date.now(), caseNo:'00X' });
+    }
+    else if (data.action === 'editLearnerComment') resolve({ success:true });
+    else if (data.action === 'getResults') resolve({ success:true, results: MOCK_RECORDS });
+    else if (data.action === 'getComments') resolve({ success:true, comments: [
+      { id:'c1', authorRole:'evaluator', authorName:'山田 花子', body:'次回は焦らず基本操作を確認しましょう。', postedAt:new Date().toISOString(), likeCount:1, likedByMe:false, target:'evaluator' }
+    ]});
+    else if (data.action === 'addComment') resolve({ success:true, id:'c_new' });
+    else if (data.action === 'toggleLike') resolve({ success:true, likeCount:1, likedByMe:true });
+    else if (data.action === 'rateEvaluatorComment') resolve({ success:true });
+    else resolve({ success:false, error:'デモモード: この操作は未対応です' });
+  }, 350));
+}
+function logout() { sessionStorage.clear(); location.href = 'index.html'; }
+
+// ラベル定数
+const AUTO_L = ['','見学中心','補助を受けながら実施','主体的に実施（困った時のみ補助）','ほぼ単独で実施'];
+const PERF_L = ['','準備不足','術式に不慣れ','中間的','自立水準','卓越'];
+const PERF_R = ['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'];
+const DIFF_L = ['','簡単','平均的','難しい'];
+const TS_ITEMS = [
+  { label: '組織への配慮', anchors: { 1: '損傷を\n繰り返す', 3: '偶発的\n損傷あり', 5: '損傷を\n最小限に' } },
+  { label: '時間と動作',   anchors: { 1: '無駄な\n動作が多い', 3: '時に\n不要な動作', 5: '最大限\n効率的' } },
+  { label: '器具操作',     anchors: { 1: 'ぎこちなく\n不確か', 3: '時に\nぎこちなさ', 5: 'スムーズ\nで正確' } },
+  { label: '手術の流れ',   anchors: { 1: '頻回に\n手が止まる', 3: 'ある程度\n見通しあり', 5: '淀みなく\n流れる' } },
+  { label: '術式の知識',   anchors: { 1: '多くの\n場面で要指示', 3: '重要な\n局面を把握', 5: '全局面\nに精通' } },
+];
+const TS_N = TS_ITEMS.map(t => t.label);
+
+// -------------------------------------------------------
+// タブ切り替え
+// -------------------------------------------------------
+let resultsLoaded = false;
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['form','results'][i] === tab));
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', ['tab-form','tab-results'][i] === `tab-${tab}`));
+  if (tab === 'results' && !resultsLoaded) { loadResults(); resultsLoaded = true; }
+}
+
+function switchSubTab(tab) {
+  document.querySelectorAll('.sub-tab-btn').forEach((b,i) => b.classList.toggle('active', ['list','chart'][i] === tab));
+  document.querySelectorAll('.sub-panel').forEach((p,i) => p.classList.toggle('active', ['sub-list','sub-chart'][i] === `sub-${tab}`));
+  if (tab === 'chart' && allResults.length) updateCharts();
+}
+
+// =========================================================
+// 症例タブ：一覧 ⇄ 新規開始 ⇄ 評価フォーム の3ビュー
+// =========================================================
+let myDrafts = [];
+let evaluatorsCache = [];
+
+async function initForm() {
+  const c = document.getElementById('formContainer');
+  c.innerHTML = '<div class="loading-bar">読み込み中...</div>';
+  try {
+    const [evRes, draftRes] = await Promise.all([
+      gasCall({ action:'getEvaluators', facilityCode, userId, pin }),
+      gasCall({ action:'getMyDrafts', facilityCode, userId, pin })
+    ]);
+    if (!evRes.success) { c.innerHTML = `<div class="card"><div class="error-box">${evRes.error}</div></div>`; return; }
+    evaluatorsCache = evRes.evaluators;
+    myDrafts = draftRes.success ? draftRes.drafts : [];
+    renderCaseList();
+  } catch { c.innerHTML = `<div class="card"><div class="error-box">接続エラー。ネットワークを確認してください。</div></div>`; }
+}
+
+function renderCaseList() {
+  const c = document.getElementById('formContainer');
+  const draftsHtml = myDrafts.length ? myDrafts.map(d => `
+    <div class="result-card" onclick="openDraft('${d.id}')">
+      <div class="rc-top">
+        <span class="rc-name">${d.procedure}<span class="badge-goal">症例No.${d.caseNo}</span></span>
+        <span class="badge-draft">進行中</span>
+      </div>
+      <div class="rc-meta">指導医: ${d.evaluatorName}${d.preOpGoal ? '　🎯 術前目標あり' : ''}</div>
+    </div>`).join('') : '';
+
+  c.innerHTML = `
+    ${myDrafts.length ? `<div class="section-label">進行中の症例（${myDrafts.length}件）</div>${draftsHtml}` : ''}
+    <div class="section-label">新しい症例</div>
+    <div class="card" style="text-align:center">
+      <p style="font-size:13px;color:#777;margin-bottom:14px;line-height:1.6">術前に目標だけ入力しておく、または術後に評価まで一気に入力する、どちらの流れでも始められます。</p>
+      <button class="submit-btn" onclick="renderStartCase()">＋ 新しい症例を開始する</button>
+    </div>`;
+}
+
+function renderStartCase() {
+  const c = document.getElementById('formContainer');
+  const opts = evaluatorsCache.length
+    ? evaluatorsCache.map(e => `<option value="${e.userId}">${e.name}${e.department?' ('+e.department+')':''}</option>`).join('')
+    : '<option value="">（指導医が登録されていません）</option>';
+
+  c.innerHTML = `
+    <button class="text-link-btn" onclick="renderCaseList()">‹ 症例一覧に戻る</button>
+    <div class="card" style="margin-top:10px">
+      <div class="card-title">基本情報</div>
+      <label>診療科 <span class="required">*</span></label>
+      <select id="newDept" onchange="onDeptChange()"><option value="">診療科を選択...</option>${buildDeptOptions()}</select>
+      <label>術式 <span class="required">*</span></label>
+      <select id="newProcedure" onchange="toggleCustomProcedure()" disabled><option value="">まず診療科を選択してください</option></select>
+      <div id="customProcedureField" style="display:none">
+        <label>術式名を入力 <span class="required">*</span></label>
+        <input type="text" id="customProcedureInput" placeholder="例：腹腔鏡下脾臓摘出術">
+      </div>
+      <label>担当指導医 <span class="required">*</span></label>
+      <select id="newEvalSel"><option value="">指導医を選択...</option>${opts}</select>
+    </div>
+    <div class="card">
+      <div class="card-title">術前目標（任意）</div>
+      <p class="hint">この症例で意識したいことがあれば入力してください。未入力でも先に進めます。入力すると指導医に内容が共有されます。</p>
+      <textarea id="newGoal" placeholder="例：クリッピングの手技を安定させたい"></textarea>
+      <div class="btn-row">
+        <button class="submit-btn secondary" id="goalOnlyBtn" onclick="startCaseAction(true)">目標だけ保存して術後に評価する</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">このまま評価まで入力する</div>
+      <p class="hint">術後、評価まで一気に入力する場合はこちら。目標欄に入力があれば一緒に記録されますが、指導医への個別通知はされません（評価送信の通知のみ届きます）。</p>
+      <button class="submit-btn" id="goEvalBtn" onclick="startCaseAction(false)">評価入力へ進む →</button>
+    </div>`;
+
+  // 登録済みの自分の診療科があれば初期選択しておく（あくまで候補、変更可）
+  if (department && PROCEDURES[department]) {
+    document.getElementById('newDept').value = department;
+    onDeptChange();
+  }
+}
+
+function onDeptChange() {
+  const dept = document.getElementById('newDept').value;
+  const procSel = document.getElementById('newProcedure');
+  if (!dept) {
+    procSel.innerHTML = '<option value="">まず診療科を選択してください</option>';
+    procSel.disabled = true;
+  } else if (dept === '__other_dept__') {
+    // 診療科自体がリストにない場合：術式選択を飛ばして自由記載欄を直接表示
+    procSel.innerHTML = '<option value="__custom__">その他（自由入力）</option>';
+    procSel.value = '__custom__';
+    procSel.disabled = true;
+  } else {
+    procSel.innerHTML = '<option value="">術式を選択...</option>' + buildProcedureOptionsForDept(dept);
+    procSel.disabled = false;
+  }
+  toggleCustomProcedure();
+}
+
+function toggleCustomProcedure() {
+  const isCustom = document.getElementById('newProcedure').value === '__custom__';
+  document.getElementById('customProcedureField').style.display = isCustom ? 'block' : 'none';
+}
+
+function resolveProcedureValue() {
+  const sel = document.getElementById('newProcedure').value;
+  if (sel === '__custom__') return document.getElementById('customProcedureInput').value.trim();
+  return sel;
+}
+
+async function startCaseAction(goalOnly) {
+  const procedure = resolveProcedureValue();
+  const evaluatorId = document.getElementById('newEvalSel').value;
+  const goal = document.getElementById('newGoal').value.trim();
+  if (!procedure) { alert('術式を選択（またはその他で自由入力）してください'); return; }
+  if (!evaluatorId) { alert('担当指導医を選択してください'); return; }
+
+  if (goalOnly) {
+    const btn = document.getElementById('goalOnlyBtn');
+    btn.disabled = true; btn.textContent = '保存中...';
+    try {
+      const res = await gasCall({ action:'startCase', facilityCode, userId, pin, procedure, evaluatorId, goal });
+      if (!res.success) { alert('エラー: '+res.error); btn.disabled=false; btn.textContent='目標だけ保存して術後に評価する'; return; }
+      document.getElementById('successTitle').textContent = '症例を登録しました';
+      document.getElementById('successMsg').innerHTML = `症例No. <strong>${res.caseNo}</strong> として登録しました。${goal ? '指導医に目標が共有されました。<br>' : ''}手術後、この症例を開いて評価を入力してください。`;
+      document.getElementById('successOverlay').classList.add('show');
+    } catch { alert('接続エラーが発生しました。'); btn.disabled=false; btn.textContent='目標だけ保存して術後に評価する'; }
+  } else {
+    // 評価フォームへ（症例はまだ確定登録せず、評価送信時にまとめて作成）
+    renderEvalForm(null, { procedure, evaluatorId, goal });
+  }
+}
+
+async function openDraft(draftId) {
+  const d = myDrafts.find(x => String(x.id) === String(draftId));
+  if (!d) return;
+  renderEvalForm(d, null);
+}
+
+// -------------------------------------------------------
+// 評価フォーム本体
+// draft: 下書き症例オブジェクト（続きから）/ fresh: {procedure, evaluatorId, goal}（新規一気入力）
+// -------------------------------------------------------
+function renderEvalForm(draft, fresh) {
+  const c = document.getElementById('formContainer');
+  const procedure   = draft ? draft.procedure   : fresh.procedure;
+  const evaluatorId = draft ? draft.evaluatorId : fresh.evaluatorId;
+  const evaluatorName = draft ? draft.evaluatorName : (evaluatorsCache.find(e=>e.userId===evaluatorId)||{}).name || '';
+  const existingGoal = draft ? draft.preOpGoal : fresh.goal;
+  const goalIsPreop = draft && draft.goalEntryMode === 'preop';
+
+  c.innerHTML = `
+    <button class="text-link-btn" onclick="renderCaseList()">‹ 症例一覧に戻る</button>
+    <div class="card" style="margin-top:10px">
+      <div class="card-title">基本情報</div>
+      <div class="info-grid">
+        <div class="info-item"><label>術式</label><span>${procedure}</span></div>
+        <div class="info-item"><label>指導医</label><span>${evaluatorName}</span></div>
+        ${draft ? `<div class="info-item"><label>症例No.</label><span>${draft.caseNo}</span></div>` : ''}
+        <div class="info-item"><label>学習者名</label><span>${userName}</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">術前目標${goalIsPreop ? '<span class="goal-mode-tag">術前に設定済み</span>' : ''}</div>
+      ${goalIsPreop
+        ? `<div class="goal-box"><div class="goal-text">${existingGoal}</div></div>`
+        : `<p class="hint">未入力でも送信できます。入力した場合、指導医への個別通知はされません（評価送信の通知のみ届きます）。</p>
+           <textarea id="goalField" placeholder="例：クリッピングの手技を安定させたい">${existingGoal||''}</textarea>`}
+    </div>
+    <div class="card">
+      <div class="card-title">自律度</div>
+      <div class="radio-group">${[['1','見学中心'],['2','補助を受けながら実施'],['3','主体的に実施'],['4','ほぼ単独で実施']].map(([v,l])=>`<label class="radio-opt"><input type="radio" name="autonomy" value="${v}" ${draft&&String(draft.autonomy)===v?'checked':''}><span>${v}<br><small style="font-size:10px">${l}</small></span></label>`).join('')}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">術中パフォーマンス（全体評価）</div>
+      <div class="radio-group">${[['1','Ⅰ','準備不足'],['2','Ⅱ','術式に不慣れ'],['3','Ⅲ','中間的'],['4','Ⅳ','自立水準'],['5','Ⅴ','卓越']].map(([v,r,l])=>`<label class="radio-opt"><input type="radio" name="performance" value="${v}" ${draft&&String(draft.performance)===v?'checked':''}><span>${r}<br><small style="font-size:10px">${l}</small></span></label>`).join('')}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">症例難易度</div>
+      <div class="radio-group">${[['1','簡単'],['2','平均的'],['3','難しい']].map(([v,l])=>`<label class="radio-opt"><input type="radio" name="difficulty" value="${v}" ${draft&&String(draft.difficulty)===v?'checked':''}><span>${v}<br><small style="font-size:10px">${l}</small></span></label>`).join('')}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">PERFORM Technical Scale（自己評価）</div>
+      ${TS_ITEMS.map((item,i) => `
+        <div class="osats-item">
+          <h4>${i+1}. ${item.label}</h4>
+          <div class="osats-anchor-row">${[1,2,3,4,5].map(v => { const a=item.anchors[v]; return `<span class="${a?'has-anchor':''}">${a?a.replace('\n',''):''}</span>`; }).join('')}</div>
+          <div class="osats-scale">${[1,2,3,4,5].map(v => { const key='ts'+(i+1); const checked = draft && String(draft[key])===String(v) ? 'checked' : ''; return `<label><input type="radio" name="ts${i+1}" value="${v}" ${checked}><span>${v}</span></label>`; }).join('')}</div>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">自己フィードバック</div>
+      <label>① 良かった点</label>
+      <textarea id="fbGood" placeholder="うまくできたこと、意識してよかった点など">${draft&&draft.feedbackGood?draft.feedbackGood:''}</textarea>
+      <label>② 次回の目標・改善点</label>
+      <textarea id="fbGoal" placeholder="次回に向けて意識したいこと、課題など">${draft&&draft.feedbackGoal?draft.feedbackGoal:''}</textarea>
+    </div>
+    <div class="btn-row">
+      <button class="submit-btn secondary" id="draftBtn" onclick='saveEvalDraft(${draft ? `"${draft.id}"` : 'null'})'>
+        <span id="draftLabel">一時保存する</span>
+        <div class="spinner" id="draftSpinner"></div>
+      </button>
+    </div>
+    <button class="submit-btn" id="submitBtn" onclick='submitForm(${draft ? `"${draft.id}"` : 'null'})'>
+      <span id="submitLabel">指導医へ送信する</span>
+      <div class="spinner" id="submitSpinner"></div>
+    </button>`;
+}
+
+function getRadio(name) { const e = document.querySelector(`input[name="${name}"]:checked`); return e ? e.value : null; }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function saveEvalDraft(recordId) {
+  const autonomy = getRadio('autonomy'), performance = getRadio('performance'), difficulty = getRadio('difficulty');
+  const ts1=getRadio('ts1'),ts2=getRadio('ts2'),ts3=getRadio('ts3'),ts4=getRadio('ts4'),ts5=getRadio('ts5');
+  const goalField = document.getElementById('goalField');
+  const goal = goalField ? goalField.value.trim() : undefined;
+  const feedbackGood = document.getElementById('fbGood').value.trim();
+  const feedbackGoal = document.getElementById('fbGoal').value.trim();
+
+  const btn = document.getElementById('draftBtn');
+  btn.disabled = true;
+  document.getElementById('draftSpinner').style.display = 'block';
+  document.getElementById('draftLabel').textContent = '保存中...';
+
+  try {
+    const payload = { action:'saveLearnerDraft', facilityCode, userId, pin,
+      record:{ autonomy, performance, difficulty, ts1, ts2, ts3, ts4, ts5, feedbackGood, feedbackGoal } };
+    if (recordId) { payload.recordId = recordId; if (goal !== undefined) payload.goal = goal; }
+    if (!recordId) {
+      payload.procedure = window.__freshProcedure;
+      payload.evaluatorId = window.__freshEvaluatorId;
+      if (goal !== undefined) payload.goal = goal;
+    }
+    const res = await gasCall(payload);
+    if (!res.success) { alert('エラー: ' + res.error); return; }
+    showToast('💾 一時保存しました（未送信）');
+    resultsLoaded = false;
+  } catch (e) {
+    alert('接続エラーが発生しました。');
+  } finally {
+    const b = document.getElementById('draftBtn');
+    if (b) { b.disabled = false; document.getElementById('draftSpinner').style.display = 'none'; document.getElementById('draftLabel').textContent = '一時保存する'; }
+  }
+}
+
+async function submitForm(recordId) {
+  const autonomy = getRadio('autonomy'), performance = getRadio('performance'), difficulty = getRadio('difficulty');
+  const ts1=getRadio('ts1'),ts2=getRadio('ts2'),ts3=getRadio('ts3'),ts4=getRadio('ts4'),ts5=getRadio('ts5');
+  if (!autonomy||!performance||!difficulty) { alert('自律度・術中パフォーマンス・症例難易度を選択してください'); return; }
+  if (!ts1||!ts2||!ts3||!ts4||!ts5) { alert('Technical Scale の全項目を選択してください'); return; }
+
+  const goalField = document.getElementById('goalField');
+  const goal = goalField ? goalField.value.trim() : undefined;
+  const feedbackGood = document.getElementById('fbGood').value.trim();
+  const feedbackGoal = document.getElementById('fbGoal').value.trim();
+
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitSpinner').style.display = 'block';
+  document.getElementById('submitLabel').textContent = '送信中...';
+  try {
+    const payload = { action:'submitLearner', facilityCode, userId, pin,
+      record:{ autonomy, performance, difficulty, ts1, ts2, ts3, ts4, ts5, feedbackGood, feedbackGoal } };
+    if (recordId) { payload.recordId = recordId; if (goal !== undefined) payload.goal = goal; }
+    if (!recordId) {
+      // 新規一気入力の場合、renderEvalFormで保持していたfresh情報が必要なので再取得
+      payload.procedure = window.__freshProcedure;
+      payload.evaluatorId = window.__freshEvaluatorId;
+      if (goal !== undefined) payload.goal = goal;
+    }
+    const res = await gasCall(payload);
+    if (!res.success) { alert('エラー: '+res.error); return; }
+    document.getElementById('successTitle').textContent = '送信完了';
+    document.getElementById('successMsg').innerHTML = `症例No. <strong>${res.caseNo||''}</strong> の評価を送信しました。<br>指導医にメールで通知されました。評価が完了したらお知らせします。`;
+    document.getElementById('successOverlay').classList.add('show');
+  } catch { alert('接続エラーが発生しました。再度お試しください。'); }
+  finally {
+    const btn = document.getElementById('submitBtn');
+    if (btn) { btn.disabled = false; document.getElementById('submitSpinner').style.display = 'none'; document.getElementById('submitLabel').textContent = '指導医へ送信する'; }
+  }
+}
+function afterSubmit() { document.getElementById('successOverlay').classList.remove('show'); resultsLoaded = false; initForm(); }
+
+// -------------------------------------------------------
+// 結果データ（共有）
+// -------------------------------------------------------
+let allResults = [];
+let modalRadarChart = null;
+let currentModalRecord = null;
+
+async function loadResults() {
+  document.getElementById('resultsList').innerHTML  = '<div class="loading-bar">読み込み中...</div>';
+  document.getElementById('chartSection').innerHTML = '<div class="loading-bar">読み込み中...</div>';
+  try {
+    const res = await gasCall({ action:'getResults', facilityCode, userId, pin, role:'learner' });
+    if (!res.success) {
+      document.getElementById('resultsList').innerHTML = `<div class="error-box">${res.error}</div>`;
+      document.getElementById('chartSection').innerHTML = '';
+      return;
+    }
+    allResults = res.results;
+    renderResultList();
+    renderChartSection();
+    updateNewResultsBadge();
+  } catch {
+    document.getElementById('resultsList').innerHTML = '<div class="empty-msg">接続エラー。再試行してください。</div>';
+    document.getElementById('chartSection').innerHTML = '';
+  }
+}
+
+function updateNewResultsBadge() {
+  const badge = document.getElementById('newResultsBadge');
+  if (!badge) return;
+  const count = allResults.filter(r => r.isNew).length;
+  badge.style.display = count ? 'inline-block' : 'none';
+  badge.textContent = count;
+}
+
+function renderResultList() {
+  const el = document.getElementById('resultsList');
+  if (!allResults.length) { el.innerHTML = '<div class="empty-msg">まだ評価済みの結果はありません。<br>指導医が評価を完了するとここに表示されます。</div>'; return; }
+  el.innerHTML = [...allResults].reverse().map(r => `
+    <div class="result-card" onclick='openResult(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
+      <div class="rc-top"><span class="rc-name">${r.procedure}<span class="badge-goal">症例No.${r.caseNo}</span>${r.isNew ? '<span class="badge-new-flag">NEW</span>' : ''}</span><span class="badge-done">評価済み</span></div>
+      <div class="rc-meta">指導医: ${r.evaluatorName}${r.commentRating ? '　★あなたの評価: '+r.commentRating : ''}</div>
+    </div>`).join('');
+}
+
+let modalHistoryPushed = false;
+
+function openResult(r) {
+  currentModalRecord = r;
+  document.getElementById('resultModalTitle').textContent = r.procedure;
+  document.getElementById('resultModalBody').innerHTML = renderResultDetail(r);
+  setTimeout(() => drawModalRadar(r), 50);
+  document.getElementById('resultModal').classList.add('show');
+  if (!modalHistoryPushed) { history.pushState({ modal: true }, ''); modalHistoryPushed = true; }
+  loadThread(r.id);
+  if (r.isNew) {
+    r.isNew = false;
+    const cached = allResults.find(x => x.id === r.id);
+    if (cached) cached.isNew = false;
+    updateNewResultsBadge();
+    gasCall({ action:'markFeedbackViewed', facilityCode, userId, pin, recordId: r.id }).catch(() => {});
+  }
+}
+
+function closeResultModal() {
+  document.getElementById('resultModal').classList.remove('show');
+  if (modalRadarChart) { modalRadarChart.destroy(); modalRadarChart = null; }
+  renderResultList(); // NEWバッジが消えた状態を一覧に反映
+  if (modalHistoryPushed) { modalHistoryPushed = false; history.back(); }
+}
+
+// ブラウザの「戻る」ボタンで、ログイン画面まで戻らずモーダルだけ閉じられるようにする
+window.addEventListener('popstate', () => {
+  const rm = document.getElementById('resultModal');
+  if (rm && rm.classList.contains('show')) {
+    rm.classList.remove('show');
+    if (modalRadarChart) { modalRadarChart.destroy(); modalRadarChart = null; }
+    renderResultList();
+  }
+  modalHistoryPushed = false;
+});
+
+function renderResultDetail(r) {
+  const ts_l = r.learnerTS||{}, ts_e = r.evaluatorTS||{};
+  const rowS = 'padding:8px 9px;border-bottom:1px solid #f0f0f0;vertical-align:middle;';
+  const thS  = 'background:#f0f4f8;padding:7px 9px;text-align:left;font-size:11px;font-weight:700;color:#666;';
+  return `
+    <div class="info-grid">
+      <div class="info-item"><label>症例No.</label><span>${r.caseNo}</span></div>
+      <div class="info-item"><label>術式</label><span>${r.procedure}</span></div>
+      <div class="info-item"><label>指導医</label><span>${r.evaluatorName}</span></div>
+      <div class="info-item"><label>学習者</label><span>${r.learnerName}</span></div>
+    </div>
+    <div class="sec-hdr">スコア比較</div>
+    <table class="cmp-table">
+      <tr><th style="${thS}">項目</th><th style="${thS}">学習者（自己）</th><th style="${thS}">指導医</th></tr>
+      <tr><td style="${rowS}font-size:12px">自律度</td><td style="${rowS}"><span class="chip-l">${r.learnerAutonomy}：${AUTO_L[r.learnerAutonomy]||''}</span></td><td style="${rowS}"><span class="chip-e">${r.evaluatorAutonomy}：${AUTO_L[r.evaluatorAutonomy]||''}</span></td></tr>
+      <tr><td style="${rowS}font-size:12px">術中パフォーマンス</td><td style="${rowS}"><span class="chip-l">${PERF_R[r.learnerPerformance]||r.learnerPerformance}：${PERF_L[r.learnerPerformance]||''}</span></td><td style="${rowS}"><span class="chip-e">${PERF_R[r.evaluatorPerformance]||r.evaluatorPerformance}：${PERF_L[r.evaluatorPerformance]||''}</span></td></tr>
+      <tr><td style="${rowS}font-size:12px">症例難易度</td><td style="${rowS}"><span class="chip-l">${r.learnerDifficulty}：${DIFF_L[r.learnerDifficulty]||''}</span></td><td style="${rowS}"><span class="chip-e">${r.evaluatorDifficulty}：${DIFF_L[r.evaluatorDifficulty]||''}</span></td></tr>
+      ${[1,2,3,4,5].map(i=>`<tr><td style="${rowS}font-size:11px;color:#666">${TS_N[i-1]}</td><td style="${rowS}"><span class="num-l">${ts_l['ts'+i]||'-'}</span></td><td style="${rowS}"><span class="num-e">${ts_e['ts'+i]||'-'}</span></td></tr>`).join('')}
+    </table>
+    <div class="sec-hdr">Technical Scale レーダーチャート</div>
+    <div style="max-width:280px;margin:0 auto"><canvas id="modalRadarCanvas"></canvas></div>
+
+    ${r.preOpGoal ? `<div class="sec-hdr">術前目標</div><div class="goal-box"><div class="goal-text">${r.preOpGoal}</div></div>` : ''}
+
+    <div class="sec-hdr">あなたのフィードバック
+      ${r.canEditLearnerComment !== false ? `<button class="edit-comment-btn" onclick="toggleEditLearnerComment('${r.id}')">編集する</button>` : ''}
+    </div>
+    <div id="learnerFbView">
+      ${r.learnerFeedbackGood ? `<div class="fb-mini-label fb-mini-good">① 良かった点</div><div class="fb-box fb-l">${r.learnerFeedbackGood}</div>` : ''}
+      ${r.learnerFeedbackGoal ? `<div class="fb-mini-label fb-mini-goal">② 次回の目標・改善点</div><div class="fb-box fb-l">${r.learnerFeedbackGoal}</div>` : ''}
+    </div>
+    <div id="learnerFbEdit" style="display:none">
+      <label>良かった点</label><textarea id="editFbGood">${r.learnerFeedbackGood||''}</textarea>
+      <label>次回の目標・改善点</label><textarea id="editFbGoal">${r.learnerFeedbackGoal||''}</textarea>
+      <div class="btn-row"><button class="submit-btn" onclick="saveLearnerComment('${r.id}')">保存する</button></div>
+      <div class="edit-window-note">※ コメント送信から72時間以内のみ編集できます</div>
+    </div>
+    <div class="thread" id="threadArea-learner"></div>
+    <div class="thread-input-row">
+      <textarea id="newCommentBody-learner" placeholder="このフィードバックにコメントを追加..."></textarea>
+      <button class="thread-send-btn" onclick="postComment('${r.id}','learner')">送信</button>
+    </div>
+
+    <div class="sec-hdr" style="margin-top:22px">指導医のフィードバック</div>
+    ${r.evaluatorFeedbackGood ? `<div class="fb-mini-label fb-mini-good">① 良かった点</div><div class="fb-box fb-e">${r.evaluatorFeedbackGood}</div>` : ''}
+    ${r.evaluatorFeedbackGoal ? `<div class="fb-mini-label fb-mini-goal">② 次回の目標・改善点</div><div class="fb-box fb-e">${r.evaluatorFeedbackGoal}</div>` : ''}
+    <div class="thread" id="threadArea-evaluator"></div>
+    <div class="thread-input-row">
+      <textarea id="newCommentBody-evaluator" placeholder="このフィードバックにコメントを追加..."></textarea>
+      <button class="thread-send-btn" onclick="postComment('${r.id}','evaluator')">送信</button>
+    </div>
+
+    ${!r.commentRating ? `
+    <div class="rate-box" id="rateBox">
+      <div class="rate-q">指導医のコメントは参考になりましたか？</div>
+      <div class="star-row" id="starRow">${[1,2,3,4,5].map(n=>`<button class="star-btn" data-n="${n}" onclick="rateComment('${r.id}',${n})">★</button>`).join('')}</div>
+      <div class="rate-privacy-note">※ この評価は指導医には共有されません</div>
+    </div>` : `<div class="rate-box"><div class="rate-done">★ ${r.commentRating} と評価済みです</div><div class="rate-privacy-note">※ この評価は指導医には共有されません</div></div>`}
+  `;
+}
+
+function toggleEditLearnerComment(recordId) {
+  document.getElementById('learnerFbView').style.display = document.getElementById('learnerFbView').style.display === 'none' ? '' : 'none';
+  document.getElementById('learnerFbEdit').style.display = document.getElementById('learnerFbEdit').style.display === 'none' ? '' : 'none';
+}
+
+async function saveLearnerComment(recordId) {
+  const feedbackGood = document.getElementById('editFbGood').value.trim();
+  const feedbackGoal = document.getElementById('editFbGoal').value.trim();
+  try {
+    const res = await gasCall({ action:'editLearnerComment', facilityCode, userId, pin, recordId, feedbackGood, feedbackGoal });
+    if (!res.success) { alert('エラー: '+res.error); return; }
+    if (currentModalRecord) { currentModalRecord.learnerFeedbackGood = feedbackGood; currentModalRecord.learnerFeedbackGoal = feedbackGoal; }
+    resultsLoaded = false;
+    openResult(currentModalRecord);
+  } catch { alert('接続エラーが発生しました。'); }
+}
+
+async function rateComment(recordId, n) {
+  document.querySelectorAll('#starRow .star-btn').forEach(b => b.classList.toggle('active', +b.dataset.n <= n));
+  try {
+    const res = await gasCall({ action:'rateEvaluatorComment', facilityCode, userId, pin, recordId, rating:n });
+    if (!res.success) { alert('エラー: '+res.error); return; }
+    document.getElementById('rateBox').innerHTML = `<div class="rate-done">★ ${n} と評価済みです</div><div class="rate-privacy-note">※ この評価は指導医には共有されません</div>`;
+    if (currentModalRecord) currentModalRecord.commentRating = n;
+  } catch { alert('接続エラーが発生しました。'); }
+}
+
+// -------------------------------------------------------
+// フィードバックへの追加コメント（学習者用・指導医用それぞれ独立したスレッド）
+// -------------------------------------------------------
+let threadCache = { learner: [], evaluator: [] };
+
+async function loadThread(recordId) {
+  ['learner','evaluator'].forEach(t => {
+    const el = document.getElementById(`threadArea-${t}`);
+    if (el) el.innerHTML = '<div class="thread-empty">読み込み中...</div>';
+  });
+  try {
+    const res = await gasCall({ action:'getComments', facilityCode, userId, pin, recordId });
+    if (!res.success) {
+      ['learner','evaluator'].forEach(t => { const el = document.getElementById(`threadArea-${t}`); if (el) el.innerHTML = `<div class="thread-empty">${res.error}</div>`; });
+      return;
+    }
+    threadCache.learner   = res.comments.filter(c => c.target === 'learner');
+    threadCache.evaluator = res.comments.filter(c => c.target === 'evaluator');
+    renderThread('learner', recordId);
+    renderThread('evaluator', recordId);
+  } catch {
+    ['learner','evaluator'].forEach(t => { const el = document.getElementById(`threadArea-${t}`); if (el) el.innerHTML = '<div class="thread-empty">接続エラー</div>'; });
+  }
+}
+
+function renderThread(target, recordId) {
+  const area = document.getElementById(`threadArea-${target}`);
+  if (!area) return;
+  const comments = threadCache[target];
+  if (!comments.length) { area.innerHTML = '<div class="thread-empty">まだコメントはありません。</div>'; return; }
+  area.innerHTML = comments.map(c => `
+    <div class="thread-item">
+      <div class="thread-avatar ${c.authorRole}">${(c.authorName||'?')[0]}</div>
+      <div class="thread-body">
+        <div><span class="thread-name">${c.authorName}</span><span class="thread-time">${fmtTime(c.postedAt)}</span></div>
+        <div class="thread-text">${c.body}</div>
+        <button class="thread-like-btn ${c.likedByMe?'liked':''}" onclick="likeComment('${c.id}', '${recordId}')">👍 ${c.likeCount||''}</button>
+      </div>
+    </div>`).join('');
+}
+
+function fmtTime(iso) {
+  try { const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; } catch { return ''; }
+}
+
+async function postComment(recordId, target) {
+  const input = document.getElementById(`newCommentBody-${target}`);
+  const body = input.value.trim();
+  if (!body) return;
+  try {
+    const res = await gasCall({ action:'addComment', facilityCode, userId, pin, role:'learner', recordId, body, target });
+    if (!res.success) { alert('エラー: '+res.error); return; }
+    input.value = '';
+    loadThread(recordId);
+  } catch { alert('接続エラーが発生しました。'); }
+}
+
+async function likeComment(commentId, recordId) {
+  try {
+    const res = await gasCall({ action:'toggleLike', facilityCode, userId, pin, commentId });
+    if (res.success) loadThread(recordId);
+  } catch {}
+}
+
+function drawModalRadar(r) {
+  const ts_l = r.learnerTS||{}, ts_e = r.evaluatorTS||{};
+  const dataL = [1,2,3,4,5].map(i => Number(ts_l['ts'+i])||0);
+  const dataE = [1,2,3,4,5].map(i => Number(ts_e['ts'+i])||0);
+  if (modalRadarChart) modalRadarChart.destroy();
+  const ctx = document.getElementById('modalRadarCanvas');
+  if (!ctx) return;
+  modalRadarChart = new Chart(ctx, {
+    type: 'radar',
+    data: { labels: TS_N, datasets: [
+      { label:'学習者', data: dataL, borderColor:'#3182ce', backgroundColor:'rgba(49,130,206,0.15)', pointBackgroundColor:'#3182ce', pointRadius:4 },
+      { label:'指導医', data: dataE, borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.15)',  pointBackgroundColor:'#c0392b', pointRadius:4 }
+    ]},
+    options: { responsive:true, plugins:{ legend:{ position:'bottom', labels:{ font:{size:11} } } },
+      scales:{ r:{ min:0, max:5, ticks:{ stepSize:1, font:{size:10} }, pointLabels:{ font:{size:10} } } } }
+  });
+}
+
+// -------------------------------------------------------
+// 推移グラフサブタブ（症例No.順に表示。症例間隔は等間隔扱い）
+// -------------------------------------------------------
+let lineChartInstance   = null;
+let tsLineChartInstance = null;
+let radarChartInstance  = null;
+
+function renderChartSection() {
+  const el = document.getElementById('chartSection');
+  if (!allResults.length) { el.innerHTML = '<div class="empty-msg">評価済みデータがありません</div>'; return; }
+
+  const procedures = ['全症例', ...new Set(allResults.map(r => r.procedure))];
+  const opts = procedures.map(p => `<option value="${p}">${p}</option>`).join('');
+
+  el.innerHTML = `
+    <div class="chart-controls">
+      <label>術式で絞り込む</label>
+      <select id="procSelect" onchange="updateCharts()">${opts}</select>
+    </div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="match-bar" id="matchBar"></div>
+    <div class="chart-card"><h3>術中パフォーマンス推移</h3><div class="chart-wrap"><canvas id="lineCanvas"></canvas></div></div>
+    <div class="chart-card"><h3>Technical Scale 平均推移</h3><div class="chart-wrap"><canvas id="tsLineCanvas"></canvas></div></div>
+    <div class="chart-card"><h3>Technical Scale 平均（レーダーチャート）</h3><div style="max-width:300px;margin:0 auto"><canvas id="radarCanvas"></canvas></div></div>`;
+
+  updateCharts();
+}
+
+function updateCharts() {
+  const sel = document.getElementById('procSelect')?.value || '全症例';
+  const records = sel === '全症例' ? allResults : allResults.filter(r => r.procedure === sel);
+  renderStats(records);
+  renderLineChart(records);
+  renderTSLineChart(records);
+  renderRadarChart(records);
+}
+
+function avgNum(arr) { const v = arr.filter(x => x > 0); return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null; }
+function tsAvg(ts) { return avgNum([1,2,3,4,5].map(i => Number(ts?.['ts'+i])||0)); }
+function fmt(v) { return v != null ? v.toFixed(2) : '-'; }
+
+function renderStats(records) {
+  if (!records.length) { document.getElementById('statsGrid').innerHTML = ''; document.getElementById('matchBar').textContent = ''; return; }
+  const perfL = avgNum(records.map(r => Number(r.learnerPerformance)));
+  const perfE = avgNum(records.map(r => Number(r.evaluatorPerformance)));
+  const tsL   = avgNum(records.map(r => tsAvg(r.learnerTS)));
+  const match = records.filter(r => r.learnerPerformance == r.evaluatorPerformance).length;
+  const adj   = records.filter(r => Math.abs(Number(r.learnerPerformance)-Number(r.evaluatorPerformance))<=1).length;
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-box"><div class="stat-val" style="color:#555">${records.length}</div><div class="stat-label">評価済み症例数</div></div>
+    <div class="stat-box"><div class="stat-val stat-l">${fmt(perfL)}</div><div class="stat-label">パフォーマンス平均<br>（学習者）</div></div>
+    <div class="stat-box"><div class="stat-val stat-e">${fmt(perfE)}</div><div class="stat-label">パフォーマンス平均<br>（指導医）</div></div>
+    <div class="stat-box"><div class="stat-val stat-l">${fmt(tsL)}</div><div class="stat-label">TS平均<br>（学習者）</div></div>`;
+
+  document.getElementById('matchBar').innerHTML =
+    `パフォーマンス完全一致：<span>${match} / ${records.length} 件（${Math.round(match/records.length*100)}%）</span>　±1以内：<span>${adj} / ${records.length} 件（${Math.round(adj/records.length*100)}%）</span>`;
+}
+
+function orderedLabels(sorted) { return sorted.map((r,i) => [`#${i+1}`, `No.${r.caseNo}`]); }
+
+function renderLineChart(records) {
+  if (lineChartInstance) { lineChartInstance.destroy(); lineChartInstance = null; }
+  const ctx = document.getElementById('lineCanvas');
+  if (!ctx || !records.length) return;
+  const sorted = [...records].sort((a,b) => Number(String(a.id).replace(/\D/g,''))-Number(String(b.id).replace(/\D/g,'')));
+  const labels = orderedLabels(sorted);
+  lineChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label:'パフォーマンス（学習者）', data: sorted.map(r=>Number(r.learnerPerformance)),   borderColor:'#3182ce', backgroundColor:'rgba(49,130,206,0.08)', tension:0.3, pointRadius:6, fill:true },
+      { label:'パフォーマンス（指導医）', data: sorted.map(r=>Number(r.evaluatorPerformance)), borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.08)',  tension:0.3, pointRadius:6, fill:true },
+    ]},
+    options: { responsive:true,
+      plugins:{ legend:{ position:'bottom', labels:{ font:{size:11} } },
+        tooltip:{ callbacks:{ label: ctx => { const v = ctx.parsed.y; return `${ctx.dataset.label}: ${PERF_R[Math.round(v)]||v} (${v})`; }}}},
+      scales:{ y:{ min:0.5, max:5.5, ticks:{ stepSize:1, callback: v => ['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][v]||v }, title:{display:true,text:'パフォーマンス',font:{size:11}} },
+        x:{ ticks:{ font:{size:10} } } } }
+  });
+}
+
+function renderTSLineChart(records) {
+  if (tsLineChartInstance) { tsLineChartInstance.destroy(); tsLineChartInstance = null; }
+  const ctx = document.getElementById('tsLineCanvas');
+  if (!ctx || !records.length) return;
+  const sorted = [...records].sort((a,b) => Number(String(a.id).replace(/\D/g,''))-Number(String(b.id).replace(/\D/g,'')));
+  const labels = orderedLabels(sorted);
+  tsLineChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label:'TS平均（学習者）', data: sorted.map(r=>tsAvg(r.learnerTS)),   borderColor:'#3182ce', backgroundColor:'rgba(49,130,206,0.08)', tension:0.3, pointRadius:6, fill:true },
+      { label:'TS平均（指導医）', data: sorted.map(r=>tsAvg(r.evaluatorTS)), borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.08)',  tension:0.3, pointRadius:6, fill:true },
+    ]},
+    options: { responsive:true,
+      plugins:{ legend:{ position:'bottom', labels:{ font:{size:11} } },
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)||'-'}` }}},
+      scales:{ y:{ min:0.5, max:5.5, ticks:{ stepSize:1 }, title:{display:true,text:'TS平均（1-5）',font:{size:11}} },
+        x:{ ticks:{ font:{size:10} } } } }
+  });
+}
+
+function renderRadarChart(records) {
+  if (radarChartInstance) { radarChartInstance.destroy(); radarChartInstance = null; }
+  const ctx = document.getElementById('radarCanvas');
+  if (!ctx || !records.length) return;
+  const avgL = [1,2,3,4,5].map(i => avgNum(records.map(r=>Number(r.learnerTS?.['ts'+i])||0)) || 0);
+  const avgE = [1,2,3,4,5].map(i => avgNum(records.map(r=>Number(r.evaluatorTS?.['ts'+i])||0)) || 0);
+  radarChartInstance = new Chart(ctx, {
+    type:'radar',
+    data:{ labels: TS_N, datasets:[
+      { label:'学習者（平均）', data:avgL, borderColor:'#3182ce', backgroundColor:'rgba(49,130,206,0.15)', pointBackgroundColor:'#3182ce', pointRadius:4 },
+      { label:'指導医（平均）', data:avgE, borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.15)',  pointBackgroundColor:'#c0392b', pointRadius:4 }
+    ]},
+    options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{font:{size:11}} } },
+      scales:{ r:{ min:0, max:5, ticks:{ stepSize:1, font:{size:10} }, pointLabels:{ font:{size:11} } } } }
+  });
+}
+
+// 新規一気入力パスで使う一時変数（フォーム再描画をまたいで保持）
+window.__freshProcedure = null;
+window.__freshEvaluatorId = null;
+const _origStartCaseAction = startCaseAction;
+startCaseAction = async function(goalOnly) {
+  if (!goalOnly) {
+    window.__freshProcedure = resolveProcedureValue();
+    window.__freshEvaluatorId = document.getElementById('newEvalSel').value;
+  }
+  return _origStartCaseAction(goalOnly);
+};
+
+initForm();
+loadResults(); resultsLoaded = true; // ログイン直後からNEWバッジの件数が見えるよう先に読み込んでおく
+</script>
+</body>
+</html>
