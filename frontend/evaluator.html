@@ -380,12 +380,15 @@ function caseCard(r, isPending) {
 async function loadResults() {
   const el = document.getElementById('resultsList');
   try {
-    // 推移グラフ用のフィルタ・統計は従来通りgetResultsのデータを使う
-    const res = await gasCall({ action: 'getResults', facilityCode, userId, pin, role: 'evaluator' });
+    // 推移グラフ用（getResults）と学習者別一覧用（getLearnerSummary）を並列で呼ぶ
+    // （順番に呼ぶと待ち時間が合計されてしまうため、同時に投げて速い方を待つ）
+    const [res, lres] = await Promise.all([
+      gasCall({ action: 'getResults', facilityCode, userId, pin, role: 'evaluator' }),
+      gasCall({ action: 'getLearnerSummary', facilityCode, userId, pin }),
+    ]);
+
     if (res.success) { allResults = res.results || []; populateFilters(allResults); }
 
-    // 一覧は学習者ごとのグループ表示（旧・学習者別タブと同じ形式）
-    const lres = await gasCall({ action: 'getLearnerSummary', facilityCode, userId, pin });
     if (!lres.success) { el.innerHTML = `<div class="error-box">${lres.error}</div>`; return; }
     if (!lres.learners.length) { el.innerHTML = '<div class="empty-msg">評価済みの結果はまだありません</div>'; return; }
     el.innerHTML = lres.learners.map(l => learnerCard(l)).join('');
