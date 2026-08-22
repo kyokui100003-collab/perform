@@ -760,20 +760,26 @@ function getLearnerSummary({ facilityCode, userId, pin }) {
   if (!verify(facilityCode, userId, pin)) return { success: false, error: '認証失敗' };
   const rows = getSheet('evaluations').getDataRange().getValues();
   const map  = {};
+  const evaluatorName = resolveName(facilityCode, userId, '');
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
     if (r[EV.facilityCode] !== facilityCode || r[EV.evaluatorId] !== userId || r[EV.status] === 'draft') continue;
     const lid = r[EV.learnerId];
-    if (!map[lid]) map[lid] = { learnerId: lid, learnerName: resolveName(facilityCode, lid, r[EV.learnerLabel]), total: 0, reviewed: 0, pending: 0, records: [] };
+    const learnerName = resolveName(facilityCode, lid, r[EV.learnerLabel]);
+    if (!map[lid]) map[lid] = { learnerId: lid, learnerName, total: 0, reviewed: 0, pending: 0, records: [] };
     map[lid].total++;
     if (r[EV.status] === 'reviewed') {
       map[lid].reviewed++;
       map[lid].records.push({
         id: r[EV.id], caseNo: r[EV.caseNo], procedure: r[EV.procedure],
+        learnerName, evaluatorName, reviewedAt: r[EV.reviewedAt], preOpGoal: r[EV.preOpGoal] || '',
         learnerAutonomy: r[EV.autoL], learnerPerformance: r[EV.perfL], learnerDifficulty: r[EV.diffL],
         learnerTS: { ts1:r[EV.ts1L],ts2:r[EV.ts2L],ts3:r[EV.ts3L],ts4:r[EV.ts4L],ts5:r[EV.ts5L] },
+        learnerFeedbackGood: r[EV.fbGoodL]||'', learnerFeedbackGoal: r[EV.fbGoalL]||'',
         evaluatorAutonomy: r[EV.autoE], evaluatorPerformance: r[EV.perfE], evaluatorDifficulty: r[EV.diffE],
-        evaluatorTS: { ts1:r[EV.ts1E],ts2:r[EV.ts2E],ts3:r[EV.ts3E],ts4:r[EV.ts4E],ts5:r[EV.ts5E] }
+        evaluatorTS: { ts1:r[EV.ts1E],ts2:r[EV.ts2E],ts3:r[EV.ts3E],ts4:r[EV.ts4E],ts5:r[EV.ts5E] },
+        evaluatorFeedbackGood: r[EV.fbGoodE]||'', evaluatorFeedbackGoal: r[EV.fbGoalE]||'',
+        commentRating: null
       });
     } else {
       map[lid].pending++;
@@ -933,11 +939,13 @@ function seedDemoData() {
   const FC = 'DEMO';
   const LEARNER1_ID = 'LDEMO1', LEARNER1_NAME = 'デモ学習者1', LEARNER1_LABEL = '学習者A';
   const LEARNER2_ID = 'LDEMO2', LEARNER2_NAME = 'デモ学習者2', LEARNER2_LABEL = '学習者B';
+  const LEARNER3_ID = 'LDEMO3', LEARNER3_NAME = 'デモ学習者3', LEARNER3_LABEL = '学習者C';
   const EVAL_ID     = 'EDEMO1', EVAL_NAME     = 'デモ指導医',  EVAL_LABEL     = '指導医1';
 
   facSheet.appendRow([FC, 'デモ病院', '施設DEMO', iso(30)]);
   usersSheet.appendRow([FC, LEARNER1_ID, LEARNER1_NAME, 'learner',  '123456', '', 'デモ病院', '消化器外科', iso(30), 0, '', LEARNER1_LABEL, '女性', '', '2', '15件程度', '', '']);
   usersSheet.appendRow([FC, LEARNER2_ID, LEARNER2_NAME, 'learner',  '123456', '', 'デモ病院', '消化器外科', iso(25), 0, '', LEARNER2_LABEL, '男性', '', '4', '30件程度', '', '']);
+  usersSheet.appendRow([FC, LEARNER3_ID, LEARNER3_NAME, 'learner',  '123456', '', 'デモ病院', '消化器外科', iso(20), 0, '', LEARNER3_LABEL, '女性', '', '3', '20件程度', '', '']);
   usersSheet.appendRow([FC, EVAL_ID,     EVAL_NAME,     'evaluator','123456', '', 'デモ病院', '消化器外科', iso(30), 0, '', EVAL_LABEL,     '男性', 'あり', '', '', '8', '']);
 
   const rows = [];
@@ -1059,6 +1067,86 @@ function seedDemoData() {
   r[EV.feedbackViewedAt] = iso(13);
   rows.push(r);
 
+  // ===== 追加：学習者A・Bの症例数を増やす =====
+  r = baseRow(12, LEARNER1_ID, LEARNER1_LABEL, PROC1, '005', 'reviewed', 5);
+  r[EV.submittedAt] = iso(4); r[EV.reviewedAt] = iso(3);
+  r[EV.autoL]=3; r[EV.perfL]=4; r[EV.diffL]=2; r[EV.ts1L]=4; r[EV.ts2L]=4; r[EV.ts3L]=4; r[EV.ts4L]=4; r[EV.ts5L]=3;
+  r[EV.fbGoodL]='今回はクリッピングもスムーズにできた。'; r[EV.fbGoalL]='より短時間で終えられるようにしたい。';
+  r[EV.lCommentSubmittedAt] = iso(4);
+  r[EV.autoE]=3; r[EV.perfE]=4; r[EV.diffE]=2; r[EV.ts1E]=4; r[EV.ts2E]=4; r[EV.ts3E]=4; r[EV.ts4E]=4; r[EV.ts5E]=4;
+  r[EV.fbGoodE]='安定していて、そろそろ次の段階に進めそうです。'; r[EV.fbGoalE]='難易度の高い症例にも挑戦してみましょう。';
+  r[EV.eCommentSubmittedAt] = iso(3); r[EV.feedbackViewedAt] = iso(2);
+  rows.push(r);
+
+  r = baseRow(13, LEARNER1_ID, LEARNER1_LABEL, PROC3, '002', 'reviewed', 3);
+  r[EV.submittedAt] = iso(2); r[EV.reviewedAt] = iso(1);
+  r[EV.autoL]=2; r[EV.perfL]=3; r[EV.diffL]=3; r[EV.ts1L]=3; r[EV.ts2L]=2; r[EV.ts3L]=3; r[EV.ts4L]=3; r[EV.ts5L]=2;
+  r[EV.fbGoodL]='前回より落ち着いて手順を進められた。'; r[EV.fbGoalL]='吻合部の確認をもっと素早くしたい。';
+  r[EV.lCommentSubmittedAt] = iso(2);
+  r[EV.autoE]=2; r[EV.perfE]=3; r[EV.diffE]=3; r[EV.ts1E]=3; r[EV.ts2E]=3; r[EV.ts3E]=3; r[EV.ts4E]=3; r[EV.ts5E]=3;
+  r[EV.fbGoodE]='前回の課題をよく意識できていました。'; r[EV.fbGoalE]='この調子で経験を重ねていきましょう。';
+  r[EV.eCommentSubmittedAt] = iso(1); r[EV.feedbackViewedAt] = iso(0);
+  rows.push(r);
+
+  r = baseRow(14, LEARNER2_ID, LEARNER2_LABEL, PROC1, '001', 'reviewed', 7);
+  r[EV.submittedAt] = iso(6); r[EV.reviewedAt] = iso(5);
+  r[EV.autoL]=2; r[EV.perfL]=2; r[EV.diffL]=2; r[EV.ts1L]=2; r[EV.ts2L]=3; r[EV.ts3L]=2; r[EV.ts4L]=2; r[EV.ts5L]=2;
+  r[EV.fbGoodL]='胆嚢摘出術は初めてでしたが手順は理解できた。'; r[EV.fbGoalL]='視野展開をもっと早くできるようにしたい。';
+  r[EV.lCommentSubmittedAt] = iso(6);
+  r[EV.autoE]=2; r[EV.perfE]=3; r[EV.diffE]=2; r[EV.ts1E]=3; r[EV.ts2E]=3; r[EV.ts3E]=3; r[EV.ts4E]=2; r[EV.ts5E]=3;
+  r[EV.fbGoodE]='初回としては十分な出来でした。'; r[EV.fbGoalE]='次回はクリッピングの精度を意識してみましょう。';
+  r[EV.eCommentSubmittedAt] = iso(5); r[EV.feedbackViewedAt] = iso(4);
+  rows.push(r);
+
+  r = baseRow(15, LEARNER2_ID, LEARNER2_LABEL, PROC2, '003', 'reviewed', 2);
+  r[EV.submittedAt] = iso(1); r[EV.reviewedAt] = iso(0);
+  r[EV.autoL]=4; r[EV.perfL]=4; r[EV.diffL]=2; r[EV.ts1L]=4; r[EV.ts2L]=4; r[EV.ts3L]=4; r[EV.ts4L]=4; r[EV.ts5L]=4;
+  r[EV.fbGoodL]='ほぼ単独で最後まで進めることができた。'; r[EV.fbGoalL]='より難しい症例にも挑戦したい。';
+  r[EV.lCommentSubmittedAt] = iso(1);
+  r[EV.autoE]=4; r[EV.perfE]=4; r[EV.diffE]=2; r[EV.ts1E]=4; r[EV.ts2E]=4; r[EV.ts3E]=4; r[EV.ts4E]=4; r[EV.ts5E]=4;
+  r[EV.fbGoodE]='自立して安全に進められていました。'; r[EV.fbGoalE]='次はより難易度の高い症例を任せます。';
+  r[EV.eCommentSubmittedAt] = iso(0);
+  rows.push(r);
+
+  // ===== 追加：学習者3（新規） =====
+  r = baseRow(16, LEARNER3_ID, LEARNER3_LABEL, PROC1, '001', 'reviewed', 9);
+  r[EV.preOpGoal] = '基本手技の一つ一つを丁寧に行う'; r[EV.goalEntryMode] = 'preop'; r[EV.preOpGoalSetAt] = iso(9);
+  r[EV.submittedAt] = iso(8); r[EV.reviewedAt] = iso(7);
+  r[EV.autoL]=2; r[EV.perfL]=2; r[EV.diffL]=2; r[EV.ts1L]=2; r[EV.ts2L]=2; r[EV.ts3L]=2; r[EV.ts4L]=2; r[EV.ts5L]=2;
+  r[EV.fbGoodL]='目標にしていた丁寧さは意識できた。'; r[EV.fbGoalL]='もう少しスピードも意識していきたい。';
+  r[EV.lCommentSubmittedAt] = iso(8);
+  r[EV.autoE]=2; r[EV.perfE]=2; r[EV.diffE]=2; r[EV.ts1E]=2; r[EV.ts2E]=2; r[EV.ts3E]=2; r[EV.ts4E]=2; r[EV.ts5E]=2;
+  r[EV.fbGoodE]='丁寧に進められていて良かったです。'; r[EV.fbGoalE]='慣れてきたら少しずつスピードも意識してみましょう。';
+  r[EV.eCommentSubmittedAt] = iso(7); r[EV.feedbackViewedAt] = iso(6);
+  rows.push(r);
+
+  r = baseRow(17, LEARNER3_ID, LEARNER3_LABEL, PROC2, '001', 'reviewed', 6);
+  r[EV.submittedAt] = iso(5); r[EV.reviewedAt] = iso(4);
+  r[EV.autoL]=2; r[EV.perfL]=3; r[EV.diffL]=1; r[EV.ts1L]=3; r[EV.ts2L]=3; r[EV.ts3L]=3; r[EV.ts4L]=2; r[EV.ts5L]=3;
+  r[EV.fbGoodL]='開始前に確認した手順通りに進められた。'; r[EV.fbGoalL]='もう少し自信を持って進めたい。';
+  r[EV.lCommentSubmittedAt] = iso(5);
+  r[EV.autoE]=3; r[EV.perfE]=3; r[EV.diffE]=1; r[EV.ts1E]=3; r[EV.ts2E]=3; r[EV.ts3E]=3; r[EV.ts4E]=3; r[EV.ts5E]=3;
+  r[EV.fbGoodE]='落ち着いて手技を進められていました。'; r[EV.fbGoalE]='この調子で経験を積んでいきましょう。';
+  r[EV.eCommentSubmittedAt] = iso(4); r[EV.feedbackViewedAt] = iso(3);
+  rows.push(r);
+
+  r = baseRow(18, LEARNER3_ID, LEARNER3_LABEL, PROC3, '001', 'reviewed', 4);
+  r[EV.submittedAt] = iso(3); r[EV.reviewedAt] = iso(2);
+  r[EV.autoL]=1; r[EV.perfL]=2; r[EV.diffL]=3; r[EV.ts1L]=2; r[EV.ts2L]=1; r[EV.ts3L]=2; r[EV.ts4L]=2; r[EV.ts5L]=1;
+  r[EV.fbGoodL]='難しい症例だったが最後まで見学・補助できた。'; r[EV.fbGoalL]='もっと積極的に手技に関わっていきたい。';
+  r[EV.lCommentSubmittedAt] = iso(3);
+  r[EV.autoE]=1; r[EV.perfE]=2; r[EV.diffE]=3; r[EV.ts1E]=2; r[EV.ts2E]=2; r[EV.ts3E]=2; r[EV.ts4E]=2; r[EV.ts5E]=2;
+  r[EV.fbGoodE]='難しい症例でしたが集中して見学できていました。'; r[EV.fbGoalE]='次は補助できる範囲を少しずつ広げていきましょう。';
+  r[EV.eCommentSubmittedAt] = iso(2);
+  rows.push(r);
+
+  r = baseRow(19, LEARNER3_ID, LEARNER3_LABEL, PROC1, '002', 'pending', 1);
+  r[EV.submittedAt] = iso(0);
+  r[EV.autoL]=2; r[EV.perfL]=3; r[EV.diffL]=2; r[EV.ts1L]=3; r[EV.ts2L]=2; r[EV.ts3L]=3; r[EV.ts4L]=3; r[EV.ts5L]=2;
+  r[EV.fbGoodL]='前回よりも落ち着いて取り組めた。'; r[EV.fbGoalL]='引き続き丁寧さを意識したい。';
+  r[EV.lCommentSubmittedAt] = iso(0);
+  rows.push(r);
+
   rows.forEach(row => evalSheet.appendRow(row));
 
   commentsSheet.appendRow(['CM'+(Date.now()+100), p1c1Id, FC, 'evaluator', EVAL_ID, EVAL_LABEL, '視野展開のコツについて、次回一緒に確認しましょう。', iso(11), '', 'evaluator']);
@@ -1066,5 +1154,5 @@ function seedDemoData() {
   commentsSheet.appendRow(['CM'+(Date.now()+102), p1c2Id, FC, 'evaluator', EVAL_ID, EVAL_LABEL, 'スピードは経験とともに自然に上がってきます。焦らず今のペースを大事にしてください。', iso(8), '', 'learner']);
   commentsSheet.appendRow(['CM'+(Date.now()+103), p3c1Id, FC, 'evaluator', EVAL_ID, EVAL_LABEL, '吻合部確認の手順は次回一緒に流れを確認しましょう。', iso(9), '', 'evaluator']);
 
-  return `デモデータを投入しました。\n施設コード：DEMO\n\n学習者1：${LEARNER1_NAME}（PIN 123456）\n学習者2：${LEARNER2_NAME}（PIN 123456）\n指導医：${EVAL_NAME}（PIN 123456）\n\n術式3種（${PROC1}／${PROC2}／${PROC3}）にまたがる計11症例（評価済み8・指導医未対応3・下書き2）を投入しました。\n学会デモは学習者1のログインのみを想定しているため、学習者1側に厚めにデータを入れています（術前目標のみの下書き症例も含む）。\n学習者1の症例No.002（${PROC1}）、学習者2の症例No.001（${PROC2}）は未読のままにしてあります（NEWバッジの確認用）。`;
+  return `デモデータを投入しました。\n施設コード：DEMO\n\n学習者1：${LEARNER1_NAME}（PIN 123456）\n学習者2：${LEARNER2_NAME}（PIN 123456）\n学習者3：${LEARNER3_NAME}（PIN 123456）\n指導医：${EVAL_NAME}（PIN 123456）\n\n術式3種（${PROC1}／${PROC2}／${PROC3}）にまたがる計19症例（評価済み13・指導医未対応4・下書き2）を投入しました。学習者3名分のデータが指導医の「結果」タブでまとめて確認できます。\n学会デモは学習者1のログインのみを想定しているため、学習者1側に厚めにデータを入れています（術前目標のみの下書き症例も含む）。\n学習者1の症例No.002（${PROC1}）、学習者2の症例No.001（${PROC2}）は未読のままにしてあります（NEWバッジの確認用）。`;
 }
