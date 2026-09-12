@@ -620,18 +620,26 @@ function escapeHtml(s) {
 function checkPreviousGoal() {
   const hint = document.getElementById('prevGoalHint');
   if (!hint) return;
-  const proc = resolveProcedureValue().text;
-  if (!proc) { hint.style.display = 'none'; return; }
+  const dept = document.getElementById('newDept').value;
+  const procVal = document.getElementById('newProcedure').value;
+  const isCustom = procVal === '__custom__';
+  const procObj = (!isCustom && NCD_PROCEDURES[dept]) ? NCD_PROCEDURES[dept].procedures.find(p => p.name === procVal) : null;
+  // 小分類・方法まで含めた完全一致ではなく、術式の基本名（例：「胆嚢摘出術」）が含まれているかで
+  // 判定する。小分類・方法が前回と違っていても、また術式名の表記が多少違う過去データ（例：
+  // 「腹腔鏡下胆嚢摘出術」）でも「同じ術式」として拾えるようにするため。
+  const baseName = procObj ? procObj.name : (isCustom ? (document.getElementById('customProcedureInput').value || '').trim() : '');
+  if (!baseName) { hint.style.display = 'none'; return; }
 
   // 「② 次回の目標・改善点」（評価入力時に書く自己フィードバック）を最優先の候補にする。
   // これは前回の症例を終えた直後に書いた「次はこれを意識する」という宣言そのものなので、
   // 術前目標（あらかじめ立てていた目標）よりも新しい・関連性が高いことが多い。
   // 同じ症例に両方ある場合は、次回の目標・改善点を優先する（配列内で先に積むことで、
   // 日時が同じ場合の安定ソートにより優先される）。
+  const includesBase = p => p && p.includes(baseName);
   const candidates = [
-    ...(myDrafts || []).filter(d => d.procedure === proc && d.preOpGoal).map(d => ({ goal: d.preOpGoal, caseNo: d.caseNo, at: d.createdAt, source: '術前目標' })),
-    ...(allResults || []).filter(r => r.procedure === proc && r.learnerFeedbackGoal).map(r => ({ goal: r.learnerFeedbackGoal, caseNo: r.caseNo, at: r.reviewedAt, source: '②次回の目標・改善点' })),
-    ...(allResults || []).filter(r => r.procedure === proc && r.preOpGoal).map(r => ({ goal: r.preOpGoal, caseNo: r.caseNo, at: r.reviewedAt, source: '術前目標' })),
+    ...(myDrafts || []).filter(d => includesBase(d.procedure) && d.preOpGoal).map(d => ({ goal: d.preOpGoal, caseNo: d.caseNo, at: d.createdAt, label: '術前目標' })),
+    ...(allResults || []).filter(r => includesBase(r.procedure) && r.learnerFeedbackGoal).map(r => ({ goal: r.learnerFeedbackGoal, caseNo: r.caseNo, at: r.reviewedAt, label: '評価入力時に立てた次回の課題' })),
+    ...(allResults || []).filter(r => includesBase(r.procedure) && r.preOpGoal).map(r => ({ goal: r.preOpGoal, caseNo: r.caseNo, at: r.reviewedAt, label: '術前目標' })),
   ];
   if (!candidates.length) { hint.style.display = 'none'; return; }
 
@@ -639,7 +647,7 @@ function checkPreviousGoal() {
   const latest = candidates[0];
   window.__lastPrevGoal = latest.goal;
   hint.style.display = 'block';
-  hint.innerHTML = `前回（症例No.${latest.caseNo}）の${latest.source}：「${escapeHtml(latest.goal)}」`
+  hint.innerHTML = `前回（症例No.${latest.caseNo}）の${latest.label}：「${escapeHtml(latest.goal)}」`
     + `<button type="button" onclick="useThisGoal()" style="display:block;margin-top:6px;padding:4px 12px;border:none;border-radius:6px;background:#2ab5a8;color:white;font-size:11px;font-weight:700;cursor:pointer">この内容を使う</button>`;
 }
 
