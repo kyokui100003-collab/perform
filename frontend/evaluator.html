@@ -9,7 +9,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #f0f4f8; min-height: 100vh; padding-bottom: 48px; }
 
-  header { background: #2c3e50; color: white; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  header { background: #2c3e50; color: white; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .sticky-top { position: sticky; top: 0; z-index: 20; }
   .logo { font-size: 20px; font-weight: 900; letter-spacing: 2px; }
   .logo span { color: #2ab5a8; }
   .user-info { font-size: 12px; opacity: 0.9; margin-top: 3px; }
@@ -102,7 +103,7 @@
   .osats-item { margin-bottom: 18px; }
   .osats-item h4 { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 4px; }
   .osats-anchor-row { display: flex; gap: 5px; margin-bottom: 5px; }
-  .osats-anchor-row span { flex: 1; font-size: 10px; color: #aaa; text-align: center; line-height: 1.3; min-height: 20px; }
+  .osats-anchor-row span { flex: 1; font-size: 10px; color: #aaa; text-align: center; line-height: 1.3; min-height: 40px; }
   .osats-anchor-row span.has-anchor { color: #888; font-weight: 600; }
   .osats-scale { display: flex; gap: 5px; }
   .osats-scale label { margin: 0; flex: 1; text-align: center; }
@@ -174,6 +175,7 @@
 </head>
 <body>
 
+<div class="sticky-top">
 <header>
   <div>
     <div class="logo">PERF<span>O</span>RM</div>
@@ -185,6 +187,7 @@
 <div class="tab-bar">
   <button class="tab-btn active" id="tb-cases"    onclick="switchTab('cases')">担当案件<span class="badge-count" id="pendingBadge"></span></button>
   <button class="tab-btn"        id="tb-results"  onclick="switchTab('results')">結果</button>
+</div>
 </div>
 
 <!-- ===== 担当案件タブ（未評価のみ） ===== -->
@@ -317,17 +320,30 @@ function mockGasCall(data) {
 
 function logout() { sessionStorage.clear(); location.href = 'index.html'; }
 
-const AUTO_L_LEARNER   = ['','見学中心','補助を受けながら実施','主体的に実施（困った時のみ補助）','ほぼ単独で実施'];
+const AUTO_L_LEARNER   = ['','見学中心','補助を受けながら執刀','主体的に執刀（困った時のみ補助）','ほぼ単独で執刀'];
 const AUTO_L_EVALUATOR = ['','見せながら指導','積極的に介助','主体的に行わせ、困った時のみ介助','ほぼ任せて見守った'];
-const PERF_L = ['','準備不足','術式に不慣れ','中間的','自立水準','卓越'];
+const AUTO_L_EN = ['','Show and Tell','Active Help','Passive Help','Supervision Only'];
+const PERF_L = ['','準備不足','術式に不慣れ','中間的','自立','卓越'];
+const PERF_L_EN = ['','Unprepared / Critical Deficiency','Inexperienced with Procedure','Intermediate Performance','Practice-Ready Performance','Exceptional Performance'];
 const PERF_R = ['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'];
 const DIFF_L = ['','簡単','平均的','難しい'];
+const DIFF_L_EN = ['','Easy','Average','Hard'];
 const TS_ITEMS = [
-  { label: '組織への配慮', anchors: { 1: '損傷を\n繰り返す', 3: '偶発的\n損傷あり', 5: '損傷を\n最小限に' } },
-  { label: '時間と動作',   anchors: { 1: '無駄な\n動作が多い', 3: '時に\n不要な動作', 5: '最大限\n効率的' } },
-  { label: '器具操作',     anchors: { 1: 'ぎこちなく\n不確か', 3: '時に\nぎこちなさ', 5: 'スムーズ\nで正確' } },
-  { label: '手術の流れ',   anchors: { 1: '頻回に\n手が止まる', 3: 'ある程度\n見通しあり', 5: '淀みなく\n流れる' } },
-  { label: '術式の知識',   anchors: { 1: '多くの\n場面で要指示', 3: '重要な\n局面を把握', 5: '全局面\nに精通' } },
+  { label: '組織への配慮', labelEn: 'Respect for Tissue',
+    anchors: { 1: '損傷を\n繰り返す', 3: '偶発的\n損傷あり', 5: '損傷を\n最小限に' },
+    anchorsEn: { 1: 'Frequently used unnecessary force on tissue or caused damage', 3: 'Careful handling of tissue but occasionally caused inadvertent damage', 5: 'Consistently handled tissue appropriately with minimal damage' } },
+  { label: '時間と動作', labelEn: 'Time and Motion',
+    anchors: { 1: '無駄な\n動作が多い', 3: '時に\n不要な動作', 5: '最大限\n効率的' },
+    anchorsEn: { 1: 'Many unnecessary moves', 3: 'Efficient time/motion but some unnecessary moves', 5: 'Clear economy of movement and maximum efficiency' } },
+  { label: '器具操作', labelEn: 'Instrument Handling',
+    anchors: { 1: 'ぎこちなく\n不確か', 3: '時に\nぎこちなさ', 5: 'スムーズ\nで正確' },
+    anchorsEn: { 1: 'Repeatedly makes tentative or awkward moves with instruments', 3: 'Competent use of instruments but occasionally appeared stiff or awkward', 5: 'Fluid moves with instruments and no awkwardness' } },
+  { label: '手術の流れ', labelEn: 'Flow of Operation',
+    anchors: { 1: '頻回に\n手が止まる', 3: 'ある程度の\n見通しを持てた', 5: '淀みなく\n流れる' },
+    anchorsEn: { 1: 'Frequently stopped operating and seemed unsure of next move', 3: 'Demonstrated some forward planning with reasonable progression of procedure', 5: 'Obviously planned course of operation with effortless flow from one move to the next' } },
+  { label: '術式の知識', labelEn: 'Knowledge of Specific Procedure',
+    anchors: { 1: '多くの\n場面で要指示', 3: '重要な\n局面を把握', 5: '全局面\nに精通' },
+    anchorsEn: { 1: 'Deficient knowledge. Needed specific instruction at most steps', 3: 'Knew all important steps of operation', 5: 'Demonstrated familiarity with all aspects of operation' } },
 ];
 const TS_N = TS_ITEMS.map(t => t.label);
 const ROMAN = ['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'];
@@ -534,25 +550,25 @@ function renderEvalForm(r) {
     ${compareHtml}
     <div class="sec-hdr">${isReviewed ? 'あなたの評価（参照）' : 'あなたの評価を入力'}</div>
 
-    <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:7px">自律度</div>
+    <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:7px">自律度 <small style="font-weight:400;color:#999;font-size:11px">Autonomy</small></div>
     <div class="radio-group">
-      ${[1,2,3,4].map(v=>`<label class="radio-opt"><input type="radio" name="eAuto" value="${v}" ${r.evaluatorAutonomy==v?'checked':''} ${dis}><span>${v}<br><small style="font-size:10px">${AUTO_L_EVALUATOR[v]}</small></span></label>`).join('')}
+      ${[1,2,3,4].map(v=>`<label class="radio-opt"><input type="radio" name="eAuto" value="${v}" ${r.evaluatorAutonomy==v?'checked':''} ${dis}><span>${v}<br><small style="font-size:10px">${AUTO_L_EVALUATOR[v]}</small><br><small style="font-size:9px;color:#aaa">${AUTO_L_EN[v]}</small></span></label>`).join('')}
     </div>
 
-    <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:7px">術中パフォーマンス</div>
+    <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:7px">術中パフォーマンス <small style="font-weight:400;color:#999;font-size:11px">Intraoperative Performance</small></div>
     <div class="radio-group">
-      ${[1,2,3,4,5].map(v=>`<label class="radio-opt"><input type="radio" name="ePerf" value="${v}" ${r.evaluatorPerformance==v?'checked':''} ${dis}><span>${PERF_R[v]}<br><small style="font-size:10px">${PERF_L[v]}</small></span></label>`).join('')}
+      ${[1,2,3,4,5].map(v=>`<label class="radio-opt"><input type="radio" name="ePerf" value="${v}" ${r.evaluatorPerformance==v?'checked':''} ${dis}><span>${PERF_R[v]}<br><small style="font-size:10px">${PERF_L[v]}</small><br><small style="font-size:9px;color:#aaa">${PERF_L_EN[v].split(' / ')[0]}</small></span></label>`).join('')}
     </div>
 
-    <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:7px">症例難易度</div>
+    <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:7px">症例難易度 <small style="font-weight:400;color:#999;font-size:11px">Case Difficulty</small></div>
     <div class="radio-group" style="margin-bottom:18px">
-      ${[1,2,3].map(v=>`<label class="radio-opt"><input type="radio" name="eDiff" value="${v}" ${r.evaluatorDifficulty==v?'checked':''} ${dis}><span>${v}<br><small style="font-size:10px">${DIFF_L[v]}</small></span></label>`).join('')}
+      ${[1,2,3].map(v=>`<label class="radio-opt"><input type="radio" name="eDiff" value="${v}" ${r.evaluatorDifficulty==v?'checked':''} ${dis}><span>${v}<br><small style="font-size:10px">${DIFF_L[v]}</small><br><small style="font-size:9px;color:#aaa">${DIFF_L_EN[v]}</small></span></label>`).join('')}
     </div>
 
-    <div class="sec-hdr">Technical Scale</div>
+    <div class="sec-hdr">Technical Scale（OSATS-GRS改変）</div>
     ${TS_ITEMS.map((item,i) => { const key='ts'+(i+1); return `<div class="osats-item">
-        <h4>${i+1}. ${item.label}</h4>
-        <div class="osats-anchor-row">${[1,2,3,4,5].map(v => { const a=item.anchors[v]; return `<span class="${a?'has-anchor':''}">${a?a.replace('\n',''):''}</span>`; }).join('')}</div>
+        <h4>${i+1}. ${item.label} <small style="font-weight:400;color:#999;font-size:10px">${item.labelEn}</small></h4>
+        <div class="osats-anchor-row">${[1,2,3,4,5].map(v => { const a=item.anchors[v]; const ae=item.anchorsEn[v]; return `<span class="${a?'has-anchor':''}">${a?a.replace('\n',''):''}${ae?`<br><span style="font-size:8px;color:#bbb">${ae}</span>`:''}</span>`; }).join('')}</div>
         <div class="osats-scale">${[1,2,3,4,5].map(v => `<label><input type="radio" name="e_${key}" value="${v}" ${ets[key]==v?'checked':''} ${dis}><span>${v}</span></label>`).join('')}</div>
       </div>`; }).join('')}
 

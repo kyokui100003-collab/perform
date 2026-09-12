@@ -9,7 +9,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #f0f4f8; min-height: 100vh; padding-bottom: 48px; }
 
-  header { background: #2c3e50; color: white; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  header { background: #2c3e50; color: white; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .sticky-top { position: sticky; top: 0; z-index: 20; }
   .logo { font-size: 20px; font-weight: 900; letter-spacing: 2px; }
   .logo span { color: #2ab5a8; }
   .user-info { font-size: 12px; opacity: 0.9; margin-top: 3px; }
@@ -51,7 +52,7 @@
   .osats-item { margin-bottom: 18px; }
   .osats-item h4 { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 4px; }
   .osats-anchor-row { display: flex; gap: 5px; margin-bottom: 5px; }
-  .osats-anchor-row span { flex: 1; font-size: 10px; color: #aaa; text-align: center; line-height: 1.3; min-height: 20px; }
+  .osats-anchor-row span { flex: 1; font-size: 10px; color: #aaa; text-align: center; line-height: 1.3; min-height: 40px; }
   .osats-anchor-row span.has-anchor { color: #888; font-weight: 600; }
   .osats-scale { display: flex; gap: 5px; }
   .osats-scale label { margin: 0; flex: 1; text-align: center; }
@@ -182,6 +183,7 @@
 </head>
 <body>
 
+<div class="sticky-top">
 <header>
   <div>
     <div class="logo">PERF<span>O</span>RM</div>
@@ -191,8 +193,9 @@
 </header>
 
 <div class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('form')">症例</button>
+  <button class="tab-btn active" onclick="switchTab('form')">評価入力</button>
   <button class="tab-btn"       onclick="switchTab('results')">結果<span class="badge-count" id="newResultsBadge"></span></button>
+</div>
 </div>
 
 <!-- ===== 症例タブ ===== -->
@@ -359,16 +362,29 @@ function mockGasCall(data) {
 function logout() { sessionStorage.clear(); location.href = 'index.html'; }
 
 // ラベル定数
-const AUTO_L = ['','見学中心','補助を受けながら実施','主体的に実施（困った時のみ補助）','ほぼ単独で実施'];
-const PERF_L = ['','準備不足','術式に不慣れ','中間的','自立水準','卓越'];
+const AUTO_L = ['','見学中心','補助を受けながら執刀','主体的に執刀（困った時のみ補助）','ほぼ単独で執刀'];
+const AUTO_L_EN = ['','Show and Tell','Active Help','Passive Help','Supervision Only'];
+const PERF_L = ['','準備不足','術式に不慣れ','中間的','自立','卓越'];
+const PERF_L_EN = ['','Unprepared / Critical Deficiency','Inexperienced with Procedure','Intermediate Performance','Practice-Ready Performance','Exceptional Performance'];
 const PERF_R = ['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'];
 const DIFF_L = ['','簡単','平均的','難しい'];
+const DIFF_L_EN = ['','Easy','Average','Hard'];
 const TS_ITEMS = [
-  { label: '組織への配慮', anchors: { 1: '損傷を\n繰り返す', 3: '偶発的\n損傷あり', 5: '損傷を\n最小限に' } },
-  { label: '時間と動作',   anchors: { 1: '無駄な\n動作が多い', 3: '時に\n不要な動作', 5: '最大限\n効率的' } },
-  { label: '器具操作',     anchors: { 1: 'ぎこちなく\n不確か', 3: '時に\nぎこちなさ', 5: 'スムーズ\nで正確' } },
-  { label: '手術の流れ',   anchors: { 1: '頻回に\n手が止まる', 3: 'ある程度\n見通しあり', 5: '淀みなく\n流れる' } },
-  { label: '術式の知識',   anchors: { 1: '多くの\n場面で要指示', 3: '重要な\n局面を把握', 5: '全局面\nに精通' } },
+  { label: '組織への配慮', labelEn: 'Respect for Tissue',
+    anchors: { 1: '損傷を\n繰り返す', 3: '偶発的\n損傷あり', 5: '損傷を\n最小限に' },
+    anchorsEn: { 1: 'Frequently used unnecessary force on tissue or caused damage', 3: 'Careful handling of tissue but occasionally caused inadvertent damage', 5: 'Consistently handled tissue appropriately with minimal damage' } },
+  { label: '時間と動作', labelEn: 'Time and Motion',
+    anchors: { 1: '無駄な\n動作が多い', 3: '時に\n不要な動作', 5: '最大限\n効率的' },
+    anchorsEn: { 1: 'Many unnecessary moves', 3: 'Efficient time/motion but some unnecessary moves', 5: 'Clear economy of movement and maximum efficiency' } },
+  { label: '器具操作', labelEn: 'Instrument Handling',
+    anchors: { 1: 'ぎこちなく\n不確か', 3: '時に\nぎこちなさ', 5: 'スムーズ\nで正確' },
+    anchorsEn: { 1: 'Repeatedly makes tentative or awkward moves with instruments', 3: 'Competent use of instruments but occasionally appeared stiff or awkward', 5: 'Fluid moves with instruments and no awkwardness' } },
+  { label: '手術の流れ', labelEn: 'Flow of Operation',
+    anchors: { 1: '頻回に\n手が止まる', 3: 'ある程度の\n見通しを持てた', 5: '淀みなく\n流れる' },
+    anchorsEn: { 1: 'Frequently stopped operating and seemed unsure of next move', 3: 'Demonstrated some forward planning with reasonable progression of procedure', 5: 'Obviously planned course of operation with effortless flow from one move to the next' } },
+  { label: '術式の知識', labelEn: 'Knowledge of Specific Procedure',
+    anchors: { 1: '多くの\n場面で要指示', 3: '重要な\n局面を把握', 5: '全局面\nに精通' },
+    anchorsEn: { 1: 'Deficient knowledge. Needed specific instruction at most steps', 3: 'Knew all important steps of operation', 5: 'Demonstrated familiarity with all aspects of operation' } },
 ];
 const TS_N = TS_ITEMS.map(t => t.label);
 
@@ -459,7 +475,7 @@ function renderStartCase() {
       </div>
       <div id="customProcedureField" style="display:none">
         <label>術式名を入力 <span class="required">*</span></label>
-        <input type="text" id="customProcedureInput" placeholder="例：腹腔鏡下脾臓摘出術">
+        <input type="text" id="customProcedureInput" placeholder="例：腹腔鏡下脾臓摘出術" oninput="checkPreviousGoal()">
       </div>
       <label>担当指導医 <span class="required">*</span></label>
       <select id="newEvalSel"><option value="">指導医を選択...</option>${opts}</select>
@@ -467,6 +483,7 @@ function renderStartCase() {
     <div class="card">
       <div class="card-title">術前目標（任意）</div>
       <p class="hint">この症例で意識したいことがあれば入力してください。未入力でも先に進めます。入力すると指導医に内容が共有されます。</p>
+      <div id="prevGoalHint" style="display:none;background:#f0faf4;border:1.5px solid #9ae6b4;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;color:#276749;line-height:1.6"></div>
       <textarea id="newGoal" placeholder="例：クリッピングの手技を安定させたい"></textarea>
       <div class="btn-row">
         <button class="submit-btn secondary" id="goalOnlyBtn" onclick="startCaseAction(true)">目標だけ保存して術後に評価する</button>
@@ -574,10 +591,44 @@ function onProcedureChange() {
   } else {
     methodSel.innerHTML = ''; methodField.style.display = 'none';
   }
+  checkPreviousGoal();
 }
 
-// 小分類・方法アプローチは表示切り替えのみで値の再計算は不要（送信時にresolveProcedureValueで組み立てる）
-function onSubcatOrMethodChange() {}
+// 小分類・方法アプローチが変わると術式の組み立て文字列（＝同一術式かどうかの判定に使う値）も
+// 変わるので、前回の目標チェックをここでもやり直す
+function onSubcatOrMethodChange() { checkPreviousGoal(); }
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// 同じ術式（診療科＋術式＋小分類＋方法の組み立て文字列が完全一致）で過去に立てた術前目標が
+// あれば、それを見つけて「この内容を使う」ボタンから引用できるようにする。
+// 参照元は「進行中の症例（下書き）」と「評価済みの結果」の2つ（学習者本人が閲覧できる範囲）。
+function checkPreviousGoal() {
+  const hint = document.getElementById('prevGoalHint');
+  if (!hint) return;
+  const proc = resolveProcedureValue().text;
+  if (!proc) { hint.style.display = 'none'; return; }
+
+  const candidates = [
+    ...(myDrafts || []).filter(d => d.procedure === proc && d.preOpGoal).map(d => ({ goal: d.preOpGoal, caseNo: d.caseNo, at: d.createdAt })),
+    ...(allResults || []).filter(r => r.procedure === proc && r.preOpGoal).map(r => ({ goal: r.preOpGoal, caseNo: r.caseNo, at: r.reviewedAt })),
+  ];
+  if (!candidates.length) { hint.style.display = 'none'; return; }
+
+  candidates.sort((a, b) => new Date(b.at) - new Date(a.at));
+  const latest = candidates[0];
+  window.__lastPrevGoal = latest.goal;
+  hint.style.display = 'block';
+  hint.innerHTML = `前回（症例No.${latest.caseNo}）に立てた目標：「${escapeHtml(latest.goal)}」`
+    + `<button type="button" onclick="useThisGoal()" style="display:block;margin-top:6px;padding:4px 12px;border:none;border-radius:6px;background:#2ab5a8;color:white;font-size:11px;font-weight:700;cursor:pointer">この内容を使う</button>`;
+}
+
+function useThisGoal() {
+  const ta = document.getElementById('newGoal');
+  if (ta && window.__lastPrevGoal) ta.value = window.__lastPrevGoal;
+}
 
 // 選択内容から最終的な術式文字列とNCDコードを組み立てる。
 // 自由入力（診療科・術式とも）の場合はNCDコードは空文字のまま返す。
@@ -663,23 +714,23 @@ function renderEvalForm(draft, fresh) {
            <textarea id="goalField" placeholder="例：クリッピングの手技を安定させたい">${existingGoal||''}</textarea>`}
     </div>
     <div class="card">
-      <div class="card-title">自律度</div>
-      <div class="radio-group">${[['1','見学中心'],['2','補助を受けながら実施'],['3','主体的に実施'],['4','ほぼ単独で実施']].map(([v,l])=>`<label class="radio-opt"><input type="radio" name="autonomy" value="${v}" ${draft&&String(draft.autonomy)===v?'checked':''}><span>${v}<br><small style="font-size:10px">${l}</small></span></label>`).join('')}</div>
+      <div class="card-title">自律度 <small style="font-weight:400;color:#999;font-size:11px">Autonomy</small></div>
+      <div class="radio-group">${[['1','見学中心','Show and Tell'],['2','補助を受けながら執刀','Active Help'],['3','主体的に執刀','Passive Help'],['4','ほぼ単独で執刀','Supervision Only']].map(([v,l,le])=>`<label class="radio-opt"><input type="radio" name="autonomy" value="${v}" ${draft&&String(draft.autonomy)===v?'checked':''}><span>${v}<br><small style="font-size:10px">${l}</small><br><small style="font-size:9px;color:#aaa">${le}</small></span></label>`).join('')}</div>
     </div>
     <div class="card">
-      <div class="card-title">術中パフォーマンス（全体評価）</div>
-      <div class="radio-group">${[['1','Ⅰ','準備不足'],['2','Ⅱ','術式に不慣れ'],['3','Ⅲ','中間的'],['4','Ⅳ','自立水準'],['5','Ⅴ','卓越']].map(([v,r,l])=>`<label class="radio-opt"><input type="radio" name="performance" value="${v}" ${draft&&String(draft.performance)===v?'checked':''}><span>${r}<br><small style="font-size:10px">${l}</small></span></label>`).join('')}</div>
+      <div class="card-title">術中パフォーマンス <small style="font-weight:400;color:#999;font-size:11px">Intraoperative Performance</small></div>
+      <div class="radio-group">${[['1','Ⅰ','準備不足','Unprepared'],['2','Ⅱ','術式に不慣れ','Inexperienced'],['3','Ⅲ','中間的','Intermediate'],['4','Ⅳ','自立','Practice-Ready'],['5','Ⅴ','卓越','Exceptional']].map(([v,r,l,le])=>`<label class="radio-opt"><input type="radio" name="performance" value="${v}" ${draft&&String(draft.performance)===v?'checked':''}><span>${r}<br><small style="font-size:10px">${l}</small><br><small style="font-size:9px;color:#aaa">${le}</small></span></label>`).join('')}</div>
     </div>
     <div class="card">
-      <div class="card-title">症例難易度</div>
-      <div class="radio-group">${[['1','簡単'],['2','平均的'],['3','難しい']].map(([v,l])=>`<label class="radio-opt"><input type="radio" name="difficulty" value="${v}" ${draft&&String(draft.difficulty)===v?'checked':''}><span>${v}<br><small style="font-size:10px">${l}</small></span></label>`).join('')}</div>
+      <div class="card-title">症例難易度 <small style="font-weight:400;color:#999;font-size:11px">Case Difficulty</small></div>
+      <div class="radio-group">${[['1','簡単','Easy'],['2','平均的','Average'],['3','難しい','Hard']].map(([v,l,le])=>`<label class="radio-opt"><input type="radio" name="difficulty" value="${v}" ${draft&&String(draft.difficulty)===v?'checked':''}><span>${v}<br><small style="font-size:10px">${l}</small><br><small style="font-size:9px;color:#aaa">${le}</small></span></label>`).join('')}</div>
     </div>
     <div class="card">
-      <div class="card-title">PERFORM Technical Scale（自己評価）</div>
+      <div class="card-title">Technical Scale（OSATS-GRS改変）<small style="font-weight:400;color:#999;font-size:11px">自己評価 / Self-assessment</small></div>
       ${TS_ITEMS.map((item,i) => `
         <div class="osats-item">
-          <h4>${i+1}. ${item.label}</h4>
-          <div class="osats-anchor-row">${[1,2,3,4,5].map(v => { const a=item.anchors[v]; return `<span class="${a?'has-anchor':''}">${a?a.replace('\n',''):''}</span>`; }).join('')}</div>
+          <h4>${i+1}. ${item.label} <small style="font-weight:400;color:#999;font-size:10px">${item.labelEn}</small></h4>
+          <div class="osats-anchor-row">${[1,2,3,4,5].map(v => { const a=item.anchors[v]; const ae=item.anchorsEn[v]; return `<span class="${a?'has-anchor':''}">${a?a.replace('\n',''):''}${ae?`<br><span style="font-size:8px;color:#bbb">${ae}</span>`:''}</span>`; }).join('')}</div>
           <div class="osats-scale">${[1,2,3,4,5].map(v => { const key='ts'+(i+1); const checked = draft && String(draft[key])===String(v) ? 'checked' : ''; return `<label><input type="radio" name="ts${i+1}" value="${v}" ${checked}><span>${v}</span></label>`; }).join('')}</div>
         </div>`).join('')}
     </div>
