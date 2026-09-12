@@ -623,9 +623,15 @@ function checkPreviousGoal() {
   const proc = resolveProcedureValue().text;
   if (!proc) { hint.style.display = 'none'; return; }
 
+  // 「② 次回の目標・改善点」（評価入力時に書く自己フィードバック）を最優先の候補にする。
+  // これは前回の症例を終えた直後に書いた「次はこれを意識する」という宣言そのものなので、
+  // 術前目標（あらかじめ立てていた目標）よりも新しい・関連性が高いことが多い。
+  // 同じ症例に両方ある場合は、次回の目標・改善点を優先する（配列内で先に積むことで、
+  // 日時が同じ場合の安定ソートにより優先される）。
   const candidates = [
-    ...(myDrafts || []).filter(d => d.procedure === proc && d.preOpGoal).map(d => ({ goal: d.preOpGoal, caseNo: d.caseNo, at: d.createdAt })),
-    ...(allResults || []).filter(r => r.procedure === proc && r.preOpGoal).map(r => ({ goal: r.preOpGoal, caseNo: r.caseNo, at: r.reviewedAt })),
+    ...(myDrafts || []).filter(d => d.procedure === proc && d.preOpGoal).map(d => ({ goal: d.preOpGoal, caseNo: d.caseNo, at: d.createdAt, source: '術前目標' })),
+    ...(allResults || []).filter(r => r.procedure === proc && r.learnerFeedbackGoal).map(r => ({ goal: r.learnerFeedbackGoal, caseNo: r.caseNo, at: r.reviewedAt, source: '②次回の目標・改善点' })),
+    ...(allResults || []).filter(r => r.procedure === proc && r.preOpGoal).map(r => ({ goal: r.preOpGoal, caseNo: r.caseNo, at: r.reviewedAt, source: '術前目標' })),
   ];
   if (!candidates.length) { hint.style.display = 'none'; return; }
 
@@ -633,7 +639,7 @@ function checkPreviousGoal() {
   const latest = candidates[0];
   window.__lastPrevGoal = latest.goal;
   hint.style.display = 'block';
-  hint.innerHTML = `前回（症例No.${latest.caseNo}）に立てた目標：「${escapeHtml(latest.goal)}」`
+  hint.innerHTML = `前回（症例No.${latest.caseNo}）の${latest.source}：「${escapeHtml(latest.goal)}」`
     + `<button type="button" onclick="useThisGoal()" style="display:block;margin-top:6px;padding:4px 12px;border:none;border-radius:6px;background:#2ab5a8;color:white;font-size:11px;font-weight:700;cursor:pointer">この内容を使う</button>`;
 }
 
