@@ -418,7 +418,7 @@ function renderCaseList() {
         <span class="rc-name">${d.procedure}<span class="badge-goal">症例No.${d.caseNo}</span></span>
         <span class="badge-draft">進行中</span>
       </div>
-      <div class="rc-meta">指導医: ${d.evaluatorName}　|　開始日: ${fmtDate(d.createdAt)}${d.preOpGoal ? '　🎯 術前目標あり' : ''}</div>
+      <div class="rc-meta">指導医: ${d.evaluatorName || '(不明)'}　|　開始日: ${fmtDate(d.createdAt) || '不明'}${d.preOpGoal ? '　🎯 術前目標あり' : ''}</div>
     </div>`).join('') : '';
 
   c.innerHTML = `
@@ -824,7 +824,7 @@ function renderResultList() {
   el.innerHTML = [...allResults].reverse().map(r => `
     <div class="result-card" onclick='openResult(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
       <div class="rc-top"><span class="rc-name">${r.procedure}<span class="badge-goal">症例No.${r.caseNo}</span>${r.isNew ? '<span class="badge-new-flag">NEW</span>' : ''}</span><span class="badge-done">評価済み</span></div>
-      <div class="rc-meta">指導医: ${r.evaluatorName}　|　評価完了日: ${fmtDate(r.reviewedAt)}${r.commentRating ? '　★あなたの評価: '+r.commentRating : ''}</div>
+      <div class="rc-meta">指導医: ${r.evaluatorName || '(不明)'}　|　評価完了日: ${fmtDate(r.reviewedAt) || '未評価'}${r.commentRating ? '　★あなたの評価: '+r.commentRating : ''}</div>
     </div>`).join('');
 }
 

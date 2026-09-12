@@ -378,7 +378,7 @@ function caseCard(r, isPending) {
       <span class="card-title">${r.procedure}${r.hasGoal ? '<span class="badge-goal">🎯 目標あり</span>' : ''}</span>
       ${isPending ? '<span class="badge-new">未評価</span>' : '<span class="badge-done">評価済み</span>'}
     </div>
-    <div class="card-meta">症例No.${r.caseNo}　学習者: ${r.learnerName}${r.submittedAt ? '　|　依頼日: '+fmtDate(r.submittedAt) : ''}</div>
+    <div class="card-meta">症例No.${r.caseNo}　学習者: ${r.learnerName || '(不明)'}${r.submittedAt ? '　|　依頼日: '+fmtDate(r.submittedAt) : ''}</div>
   </div>`;
 }
 
@@ -702,8 +702,8 @@ function buildCompareTable(r) {
   const row = (label, lVal, eVal, lLabels, eLabels, roman) => `
     <tr>
       <td style="font-size:12px;color:#555">${label}</td>
-      <td><span class="chip-l">${roman?(PERF_R[lVal]||lVal):lVal}：${lLabels[lVal]||''}</span></td>
-      <td><span class="chip-e">${roman?(PERF_R[eVal]||eVal):eVal}：${eLabels[eVal]||''}</span></td>
+      <td><span class="chip-l">${lVal!=null ? (roman?(PERF_R[lVal]||lVal):lVal)+'：'+(lLabels[lVal]||'') : '未評価'}</span></td>
+      <td><span class="chip-e">${eVal!=null ? (roman?(PERF_R[eVal]||eVal):eVal)+'：'+(eLabels[eVal]||'') : '未評価'}</span></td>
     </tr>`;
   return `
   <table class="cmp-table">
@@ -725,7 +725,7 @@ function renderResultDetail(r) {
   return `
     <div style="background:#f8f9fa;border-radius:10px;padding:13px 15px;margin-bottom:16px;font-size:13px;color:#555;line-height:1.7">
       <strong>症例No.${r.caseNo}</strong>　${r.procedure}<br>
-      学習者: ${r.learnerName}　／　指導医: ${r.evaluatorName}${r.reviewedAt ? '　／　評価完了日: '+fmtDate(r.reviewedAt) : ''}
+      学習者: ${r.learnerName || '(不明)'}　／　指導医: ${r.evaluatorName || '(不明)'}${r.reviewedAt ? '　／　評価完了日: '+(fmtDate(r.reviewedAt)||'未評価') : ''}
     </div>
     ${buildCompareTable(r)}
     <div class="chart-card" style="margin-top:16px;margin-bottom:16px">
