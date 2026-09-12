@@ -886,40 +886,50 @@ function renderStats(data) {
 
 function caseLabels(data) { return data.map((r,i) => [`#${i+1}`, `No.${r.caseNo}`]); }
 
+// 学習者・指導医のスコアが完全に一致している場合でも2本の線が重なって片方が見えなくなら
+// ないよう、表示位置にごく小さなオフセットをかけて「並走」しているように見せる。
+// ツールチップには本来の値（オフセットなし）を表示する。
+const CHART_DODGE = 0.09;
+function dodge(values, direction) {
+  return values.map(v => (v == null || isNaN(v)) ? v : v + direction * CHART_DODGE);
+}
+
 function renderLineChart(data) {
   const labels = caseLabels(data);
-  const lPerf  = data.map(r => +r.learnerPerformance   || null);
-  const ePerf  = data.map(r => +r.evaluatorPerformance || null);
+  const lPerfRaw = data.map(r => +r.learnerPerformance   || null);
+  const ePerfRaw = data.map(r => +r.evaluatorPerformance || null);
 
   if (lineChartInstance) { lineChartInstance.destroy(); lineChartInstance = null; }
   lineChartInstance = new Chart(document.getElementById('lineChart'), {
     type: 'line',
     data: { labels, datasets: [
-      { label:'パフォーマンス（学習者）', data:lPerf, borderColor:'#3182ce', backgroundColor:'rgba(49,130,206,0.08)', tension:0.3, pointRadius:5, fill:true },
-      { label:'パフォーマンス（指導医）', data:ePerf, borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.08)', tension:0.3, pointRadius:5, fill:true },
+      { label:'パフォーマンス（学習者）', data:dodge(lPerfRaw, -1), rawData:lPerfRaw, borderColor:'#3182ce', backgroundColor:'rgba(49,130,206,0.08)', tension:0.3, pointRadius:5, fill:true },
+      { label:'パフォーマンス（指導医）', data:dodge(ePerfRaw, 1), rawData:ePerfRaw, borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.08)', tension:0.3, pointRadius:5, fill:true },
     ]},
     options: { responsive:true, maintainAspectRatio:true,
-      scales: { y: { min:0.5, max:5.5, ticks:{ stepSize:1, callback: v => ROMAN[v] || '' }, title:{display:true,text:'パフォーマンス',font:{size:11}} } },
+      scales: { y: { min:0.5, max:5.5, ticks:{ stepSize:1, callback: v => ROMAN[Math.round(v)] || '' }, title:{display:true,text:'パフォーマンス',font:{size:11}} } },
       plugins: { legend:{ position:'bottom', labels:{ font:{size:11}, boxWidth:12 } },
-        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${ROMAN[Math.round(ctx.parsed.y)]||ctx.parsed.y} (${ctx.parsed.y})` }} } }
+        tooltip:{ callbacks:{ label: ctx => { const v = ctx.dataset.rawData[ctx.dataIndex]; return `${ctx.dataset.label}: ${ROMAN[Math.round(v)]||v} (${v})`; } } } } }
   });
 }
 
 function renderTSLineChart(data) {
   const labels = caseLabels(data);
   const tsAvgFn = (r, field) => { const ts=r[field]||{}; const v=[ts.ts1,ts.ts2,ts.ts3,ts.ts4,ts.ts5].map(Number).filter(x=>x>0); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; };
+  const lRaw = data.map(r=>tsAvgFn(r,'learnerTS'));
+  const eRaw = data.map(r=>tsAvgFn(r,'evaluatorTS'));
 
   if (tsLineChartInstance) { tsLineChartInstance.destroy(); tsLineChartInstance = null; }
   tsLineChartInstance = new Chart(document.getElementById('tsLineChart'), {
     type: 'line',
     data: { labels, datasets: [
-      { label:'TS平均（学習者）', data:data.map(r=>tsAvgFn(r,'learnerTS')),   borderColor:'#3182ce', backgroundColor:'rgba(49,130,206,0.08)', tension:0.3, pointRadius:5, fill:true },
-      { label:'TS平均（指導医）', data:data.map(r=>tsAvgFn(r,'evaluatorTS')), borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.08)', tension:0.3, pointRadius:5, fill:true },
+      { label:'TS平均（学習者）', data:dodge(lRaw, -1), rawData:lRaw, borderColor:'#3182ce', backgroundColor:'rgba(49,130,206,0.08)', tension:0.3, pointRadius:5, fill:true },
+      { label:'TS平均（指導医）', data:dodge(eRaw, 1), rawData:eRaw, borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.08)', tension:0.3, pointRadius:5, fill:true },
     ]},
     options: { responsive:true, maintainAspectRatio:true,
       scales: { y: { min:0.5, max:5.5, ticks:{ stepSize:1 }, title:{display:true,text:'TS平均（1-5）',font:{size:11}} } },
       plugins: { legend:{ position:'bottom', labels:{ font:{size:11}, boxWidth:12 } },
-        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)||'-'}` }} } }
+        tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: ${ctx.dataset.rawData[ctx.dataIndex]?.toFixed(2)||'-'}` } } } }
   });
 }
 
