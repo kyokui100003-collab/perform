@@ -236,6 +236,7 @@
   </div>
 </div>
 
+<script src="procedures-data.js"></script>
 <script>
 const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
 
@@ -256,23 +257,18 @@ document.getElementById('headerInfo').innerHTML =
 
 const DEMO_MODE = GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE';
 
-// 術式リスト：診療科ごとの定型的な術式候補（サシーム先生の方針：NCD術式との厳密な対応は今回は行わない）
-// 候補にない術式は「その他（自由入力）」から入力できる
-const PROCEDURES = {
-  '消化器外科': ['腹腔鏡下胆嚢摘出術','腹腔鏡下虫垂切除術','腹腔鏡下結腸切除術','腹腔鏡下直腸切除術','腹腔鏡下胃切除術','鼠径ヘルニア修復術'],
-  '産婦人科':   ['腹腔鏡下子宮全摘術','腹腔鏡下卵巣嚢腫摘出術','帝王切開術'],
-  '呼吸器外科': ['胸腔鏡下肺葉切除術','胸腔鏡下縦隔腫瘍摘出術'],
-  '泌尿器科':   ['腹腔鏡下（ロボット支援）前立腺全摘術','経尿道的膀胱腫瘍切除術（TURBT）'],
-  '形成外科':   ['遊離皮弁再建術','熱傷デブリードマン'],
-};
-
+// 術式リスト：procedures-data.js の NCD_PROCEDURES（診療科→術式→小分類・方法・NCDコード）を使用。
+// 候補にない術式・診療科は「その他（自由入力）」から入力できる。
 function buildDeptOptions() {
-  return Object.keys(PROCEDURES).map(d => `<option value="${d}">${d}</option>`).join('')
+  return Object.keys(NCD_PROCEDURES).map(d => `<option value="${d}">${d}</option>`).join('')
     + `<option value="__other_dept__">その他（上記にない診療科）</option>`;
 }
-function buildProcedureOptionsForDept(dept) {
-  if (!dept || !PROCEDURES[dept]) return '';
-  return PROCEDURES[dept].map(p => `<option value="${p}">${p}</option>`).join('')
+function buildProcedureOptionsForDept(dept, filterText) {
+  if (!dept || !NCD_PROCEDURES[dept]) return '';
+  const q = (filterText || '').trim();
+  const list = NCD_PROCEDURES[dept].procedures;
+  const filtered = q ? list.filter(p => p.name.includes(q)) : list;
+  return filtered.map(p => `<option value="${p.name}">${p.name}</option>`).join('')
     + `<option value="__custom__">その他（自由入力）</option>`;
 }
 
@@ -385,7 +381,7 @@ function renderCaseList() {
         <span class="rc-name">${d.procedure}<span class="badge-goal">症例No.${d.caseNo}</span></span>
         <span class="badge-draft">進行中</span>
       </div>
-      <div class="rc-meta">指導医: ${d.evaluatorName}${d.preOpGoal ? '　🎯 術前目標あり' : ''}</div>
+      <div class="rc-meta">指導医: ${d.evaluatorName}　|　開始日: ${fmtDate(d.createdAt)}${d.preOpGoal ? '　🎯 術前目標あり' : ''}</div>
     </div>`).join('') : '';
 
   c.innerHTML = `
@@ -410,7 +406,16 @@ function renderStartCase() {
       <label>診療科 <span class="required">*</span></label>
       <select id="newDept" onchange="onDeptChange()"><option value="">診療科を選択...</option>${buildDeptOptions()}</select>
       <label>術式 <span class="required">*</span></label>
-      <select id="newProcedure" onchange="toggleCustomProcedure()" disabled><option value="">まず診療科を選択してください</option></select>
+      <input type="text" id="procSearchInput" placeholder="術式名で検索（入力すると絞り込まれます）" oninput="filterProcedureOptions()" disabled style="margin-bottom:6px">
+      <select id="newProcedure" onchange="onProcedureChange()" disabled><option value="">まず診療科を選択してください</option></select>
+      <div id="subcatField" style="display:none">
+        <label>術式の分類</label>
+        <select id="newSubcat" onchange="onSubcatOrMethodChange()"></select>
+      </div>
+      <div id="methodField" style="display:none">
+        <label>方法・アプローチ</label>
+        <select id="newMethod" onchange="onSubcatOrMethodChange()"></select>
+      </div>
       <div id="customProcedureField" style="display:none">
         <label>術式名を入力 <span class="required">*</span></label>
         <input type="text" id="customProcedureInput" placeholder="例：腹腔鏡下脾臓摘出術">
@@ -433,7 +438,7 @@ function renderStartCase() {
     </div>`;
 
   // 登録済みの自分の診療科があれば初期選択しておく（あくまで候補、変更可）
-  if (department && PROCEDURES[department]) {
+  if (department && NCD_PROCEDURES[department]) {
     document.getElementById('newDept').value = department;
     onDeptChange();
   }
@@ -442,44 +447,109 @@ function renderStartCase() {
 function onDeptChange() {
   const dept = document.getElementById('newDept').value;
   const procSel = document.getElementById('newProcedure');
+  const searchInput = document.getElementById('procSearchInput');
+  searchInput.value = '';
   if (!dept) {
     procSel.innerHTML = '<option value="">まず診療科を選択してください</option>';
-    procSel.disabled = true;
+    procSel.disabled = true; searchInput.disabled = true;
   } else if (dept === '__other_dept__') {
     // 診療科自体がリストにない場合：術式選択を飛ばして自由記載欄を直接表示
     procSel.innerHTML = '<option value="__custom__">その他（自由入力）</option>';
     procSel.value = '__custom__';
-    procSel.disabled = true;
+    procSel.disabled = true; searchInput.disabled = true;
   } else {
     procSel.innerHTML = '<option value="">術式を選択...</option>' + buildProcedureOptionsForDept(dept);
-    procSel.disabled = false;
+    procSel.disabled = false; searchInput.disabled = false;
   }
-  toggleCustomProcedure();
+  onProcedureChange();
 }
 
-function toggleCustomProcedure() {
-  const isCustom = document.getElementById('newProcedure').value === '__custom__';
+// 術式名の検索欄：入力するたびにプルダウンの候補を絞り込む（別ボタンは設けず、
+// 入力＝即絞り込みのコンボボックス方式にしている）
+function filterProcedureOptions() {
+  const dept = document.getElementById('newDept').value;
+  const q = document.getElementById('procSearchInput').value;
+  const procSel = document.getElementById('newProcedure');
+  const prevVal = procSel.value;
+  procSel.innerHTML = '<option value="">術式を選択...</option>' + buildProcedureOptionsForDept(dept, q);
+  if ([...procSel.options].some(o => o.value === prevVal)) procSel.value = prevVal;
+  else procSel.value = '';
+  onProcedureChange();
+}
+
+// 術式選択に応じて、小分類・方法アプローチのプルダウン／自由入力欄の表示を切り替える。
+// 小分類・方法が存在しない術式（マスターリストで「－」の術式）は、その段階を自動でスキップする。
+function onProcedureChange() {
+  const dept = document.getElementById('newDept').value;
+  const procVal = document.getElementById('newProcedure').value;
+  const isCustom = procVal === '__custom__';
   document.getElementById('customProcedureField').style.display = isCustom ? 'block' : 'none';
+
+  const subField = document.getElementById('subcatField');
+  const methodField = document.getElementById('methodField');
+  const subSel = document.getElementById('newSubcat');
+  const methodSel = document.getElementById('newMethod');
+
+  const procObj = (!isCustom && NCD_PROCEDURES[dept])
+    ? NCD_PROCEDURES[dept].procedures.find(p => p.name === procVal)
+    : null;
+
+  if (procObj && procObj.subcategories.length) {
+    subSel.innerHTML = '<option value="">（選択しない）</option>' +
+      procObj.subcategories.map(s => `<option value="${s}">${s}</option>`).join('');
+    subField.style.display = 'block';
+  } else {
+    subSel.innerHTML = ''; subField.style.display = 'none';
+  }
+
+  if (procObj && procObj.methods.length) {
+    methodSel.innerHTML = '<option value="">（選択しない）</option>' +
+      procObj.methods.map(m => `<option value="${m}">${m}</option>`).join('');
+    methodField.style.display = 'block';
+  } else {
+    methodSel.innerHTML = ''; methodField.style.display = 'none';
+  }
 }
 
+// 小分類・方法アプローチは表示切り替えのみで値の再計算は不要（送信時にresolveProcedureValueで組み立てる）
+function onSubcatOrMethodChange() {}
+
+// 選択内容から最終的な術式文字列とNCDコードを組み立てる。
+// 自由入力（診療科・術式とも）の場合はNCDコードは空文字のまま返す。
 function resolveProcedureValue() {
-  const sel = document.getElementById('newProcedure').value;
-  if (sel === '__custom__') return document.getElementById('customProcedureInput').value.trim();
-  return sel;
+  const dept = document.getElementById('newDept').value;
+  const procVal = document.getElementById('newProcedure').value;
+  if (procVal === '__custom__') {
+    return { text: document.getElementById('customProcedureInput').value.trim(), ncdCode: '' };
+  }
+  const procObj = NCD_PROCEDURES[dept] ? NCD_PROCEDURES[dept].procedures.find(p => p.name === procVal) : null;
+  if (!procObj) return { text: procVal, ncdCode: '' };
+
+  const sub    = document.getElementById('newSubcat').value    || '';
+  const method = document.getElementById('newMethod').value    || '';
+  const detail = [sub, method].filter(Boolean).join('・');
+  const text = detail ? `${procObj.name}（${detail}）` : procObj.name;
+  return { text, ncdCode: procObj.ncdCode || '' };
 }
 
 async function startCaseAction(goalOnly) {
-  const procedure = resolveProcedureValue();
+  const proc = resolveProcedureValue();
   const evaluatorId = document.getElementById('newEvalSel').value;
   const goal = document.getElementById('newGoal').value.trim();
-  if (!procedure) { alert('術式を選択（またはその他で自由入力）してください'); return; }
+  if (!proc.text) { alert('術式を選択（またはその他で自由入力）してください'); return; }
   if (!evaluatorId) { alert('担当指導医を選択してください'); return; }
+
+  // 評価フォームへ進んでから送信するまでの間、選択内容を保持しておく（NCDコードは
+  // 学習者・評価者の画面には一切表示しない。裏でバックエンドへ送るためだけに保持する）
+  window.__freshProcedure = proc.text;
+  window.__freshNcdCode = proc.ncdCode;
+  window.__freshEvaluatorId = evaluatorId;
 
   if (goalOnly) {
     const btn = document.getElementById('goalOnlyBtn');
     btn.disabled = true; btn.textContent = '保存中...';
     try {
-      const res = await gasCall({ action:'startCase', facilityCode, userId, pin, procedure, evaluatorId, goal });
+      const res = await gasCall({ action: 'startCase', facilityCode, userId, pin, procedure: proc.text, ncdCode: proc.ncdCode, evaluatorId, goal });
       if (!res.success) { alert('エラー: '+res.error); btn.disabled=false; btn.textContent='目標だけ保存して術後に評価する'; return; }
       document.getElementById('successTitle').textContent = '症例を登録しました';
       document.getElementById('successMsg').innerHTML = `症例No. <strong>${res.caseNo}</strong> として登録しました。${goal ? '指導医に目標が共有されました。<br>' : ''}手術後、この症例を開いて評価を入力してください。`;
@@ -487,7 +557,7 @@ async function startCaseAction(goalOnly) {
     } catch { alert('接続エラーが発生しました。'); btn.disabled=false; btn.textContent='目標だけ保存して術後に評価する'; }
   } else {
     // 評価フォームへ（症例はまだ確定登録せず、評価送信時にまとめて作成）
-    renderEvalForm(null, { procedure, evaluatorId, goal });
+    renderEvalForm(null, { procedure: proc.text, evaluatorId, goal });
   }
 }
 
@@ -594,6 +664,7 @@ async function saveEvalDraft(recordId) {
     if (recordId) { payload.recordId = recordId; if (goal !== undefined) payload.goal = goal; }
     if (!recordId) {
       payload.procedure = window.__freshProcedure;
+      payload.ncdCode = window.__freshNcdCode;
       payload.evaluatorId = window.__freshEvaluatorId;
       if (goal !== undefined) payload.goal = goal;
     }
@@ -628,8 +699,9 @@ async function submitForm(recordId) {
       record:{ autonomy, performance, difficulty, ts1, ts2, ts3, ts4, ts5, feedbackGood, feedbackGoal } };
     if (recordId) { payload.recordId = recordId; if (goal !== undefined) payload.goal = goal; }
     if (!recordId) {
-      // 新規一気入力の場合、renderEvalFormで保持していたfresh情報が必要なので再取得
+      // 新規一気入力の場合、startCaseActionで保持していたfresh情報が必要なので再取得
       payload.procedure = window.__freshProcedure;
+      payload.ncdCode = window.__freshNcdCode;
       payload.evaluatorId = window.__freshEvaluatorId;
       if (goal !== undefined) payload.goal = goal;
     }
@@ -687,7 +759,7 @@ function renderResultList() {
   el.innerHTML = [...allResults].reverse().map(r => `
     <div class="result-card" onclick='openResult(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
       <div class="rc-top"><span class="rc-name">${r.procedure}<span class="badge-goal">症例No.${r.caseNo}</span>${r.isNew ? '<span class="badge-new-flag">NEW</span>' : ''}</span><span class="badge-done">評価済み</span></div>
-      <div class="rc-meta">指導医: ${r.evaluatorName}${r.commentRating ? '　★あなたの評価: '+r.commentRating : ''}</div>
+      <div class="rc-meta">指導医: ${r.evaluatorName}　|　評価完了日: ${fmtDate(r.reviewedAt)}${r.commentRating ? '　★あなたの評価: '+r.commentRating : ''}</div>
     </div>`).join('');
 }
 
@@ -738,6 +810,7 @@ function renderResultDetail(r) {
       <div class="info-item"><label>術式</label><span>${r.procedure}</span></div>
       <div class="info-item"><label>指導医</label><span>${r.evaluatorName}</span></div>
       <div class="info-item"><label>学習者</label><span>${r.learnerName}</span></div>
+      <div class="info-item"><label>評価完了日</label><span>${fmtDate(r.reviewedAt)}</span></div>
     </div>
     <div class="sec-hdr">スコア比較</div>
     <table class="cmp-table">
@@ -859,6 +932,11 @@ function renderThread(target, recordId) {
 
 function fmtTime(iso) {
   try { const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; } catch { return ''; }
+}
+// 症例の年月日表示（データ収集用エクスポートでは年月に丸めるが、学習者・評価者
+// 本人にはどの症例か分かるよう、画面には年月日まで表示する）
+function fmtDate(iso) {
+  try { const d = new Date(iso); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; } catch { return ''; }
 }
 
 async function postComment(recordId, target) {
@@ -1016,17 +1094,11 @@ function renderRadarChart(records) {
   });
 }
 
-// 新規一気入力パスで使う一時変数（フォーム再描画をまたいで保持）
+// 新規一気入力パスで使う一時変数（フォーム再描画をまたいで保持）。
+// 実際の設定は startCaseAction() 内で行う。
 window.__freshProcedure = null;
+window.__freshNcdCode = null;
 window.__freshEvaluatorId = null;
-const _origStartCaseAction = startCaseAction;
-startCaseAction = async function(goalOnly) {
-  if (!goalOnly) {
-    window.__freshProcedure = resolveProcedureValue();
-    window.__freshEvaluatorId = document.getElementById('newEvalSel').value;
-  }
-  return _origStartCaseAction(goalOnly);
-};
 
 initForm();
 loadResults(); resultsLoaded = true; // ログイン直後からNEWバッジの件数が見えるよう先に読み込んでおく

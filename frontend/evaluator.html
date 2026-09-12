@@ -27,6 +27,8 @@
   .sub-tab-bar { background: #f0f4f8; border-bottom: 1px solid #dde; display: flex; padding: 0 16px; max-width: 640px; margin: 0 auto; }
   .sub-tab-btn { background: none; border: none; color: #888; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; font-family: inherit; }
   .sub-tab-btn.active { color: #2c3e50; border-bottom-color: #2c3e50; }
+  .scope-toggle .sub-tab-btn { padding: 8px 14px; border-radius: 8px; border: 1.5px solid #ddd; }
+  .scope-toggle .sub-tab-btn.active { background: #eef6ff; border-color: #63b3ed; color: #2c3e50; }
   .sub-panel { display: none; }
   .sub-panel.active { display: block; }
 
@@ -199,7 +201,13 @@
     <button class="sub-tab-btn"        id="stb-chart" onclick="switchSubTab('chart')">推移グラフ</button>
   </div>
   <div class="container">
-    <div class="sub-panel active" id="sub-list"><div id="resultsList"><div class="loading-bar">読み込み中...</div></div></div>
+    <div class="sub-panel active" id="sub-list">
+      <div class="scope-toggle" style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="sub-tab-btn active" id="scope-mine"     onclick="setResultsScope('mine')">自分の担当</button>
+        <button class="sub-tab-btn"        id="scope-facility" onclick="setResultsScope('facility')">施設全体<span style="font-size:11px;color:#999">（評価完了済みのみ）</span></button>
+      </div>
+      <div id="resultsList"><div class="loading-bar">読み込み中...</div></div>
+    </div>
     <div class="sub-panel" id="sub-chart">
       <div class="chart-controls">
         <select id="chartProcFilter" onchange="renderCharts()"></select>
@@ -282,15 +290,15 @@ function mockGasCall(data) {
       resolve({ success:true });
     } else if (data.action === 'editEvaluatorComment') {
       resolve({ success:true });
-    } else if (data.action === 'getLearnerSummary') {
+    } else if (data.action === 'getLearnerSummary' || data.action === 'getFacilityLearnerSummary') {
       const map = {};
       MOCK_RECORDS.forEach(r => {
         if (!map[r.learnerId]) map[r.learnerId] = { learnerId:r.learnerId, learnerName:r.learnerName, records:[], reviewed:0, pending:0, total:0 };
         const l = map[r.learnerId];
-        if (r.status === 'reviewed') { l.records.push(r); l.reviewed++; } else l.pending++;
-        l.total++;
+        if (r.status === 'reviewed') { l.records.push(r); l.reviewed++; l.total++; }
+        else if (data.action === 'getLearnerSummary') { l.pending++; l.total++; }
       });
-      resolve({ success:true, learners: Object.values(map) });
+      resolve({ success:true, learners: Object.values(map).filter(l => l.records.length || l.pending) });
     } else if (data.action === 'getResults') {
       resolve({ success:true, results: MOCK_RECORDS.filter(r => r.status === 'reviewed') });
     } else if (data.action === 'getComments') {
@@ -370,40 +378,59 @@ function caseCard(r, isPending) {
       <span class="card-title">${r.procedure}${r.hasGoal ? '<span class="badge-goal">🎯 目標あり</span>' : ''}</span>
       ${isPending ? '<span class="badge-new">未評価</span>' : '<span class="badge-done">評価済み</span>'}
     </div>
-    <div class="card-meta">症例No.${r.caseNo}　学習者: ${r.learnerName}</div>
+    <div class="card-meta">症例No.${r.caseNo}　学習者: ${r.learnerName}${r.submittedAt ? '　|　依頼日: '+fmtDate(r.submittedAt) : ''}</div>
   </div>`;
 }
 
 // -------------------------------------------------------
 // 結果タブ（学習者ごとに評価済み症例をグループ表示）
+// scope: 'mine'（自分が担当した症例。評価待ちの件数も見える）
+//        'facility'（同一施設内・評価完了済みの症例のみ。他の指導医の担当分も含む）
 // -------------------------------------------------------
+let resultsScope = 'mine';
+
+function setResultsScope(scope) {
+  if (scope === resultsScope) return;
+  resultsScope = scope;
+  document.getElementById('scope-mine').classList.toggle('active', scope === 'mine');
+  document.getElementById('scope-facility').classList.toggle('active', scope === 'facility');
+  loadResults();
+}
+
 async function loadResults() {
   const el = document.getElementById('resultsList');
+  el.innerHTML = '<div class="loading-bar">読み込み中...</div>';
   try {
-    // 推移グラフ用（getResults）と学習者別一覧用（getLearnerSummary）を並列で呼ぶ
+    const summaryAction = resultsScope === 'facility' ? 'getFacilityLearnerSummary' : 'getLearnerSummary';
+    // 推移グラフ用（getResults）と学習者別一覧用（getLearnerSummary系）を並列で呼ぶ
     // （順番に呼ぶと待ち時間が合計されてしまうため、同時に投げて速い方を待つ）
     const [res, lres] = await Promise.all([
       gasCall({ action: 'getResults', facilityCode, userId, pin, role: 'evaluator' }),
-      gasCall({ action: 'getLearnerSummary', facilityCode, userId, pin }),
+      gasCall({ action: summaryAction, facilityCode, userId, pin }),
     ]);
 
     if (res.success) { allResults = res.results || []; populateFilters(allResults); }
 
     if (!lres.success) { el.innerHTML = `<div class="error-box">${lres.error}</div>`; return; }
-    if (!lres.learners.length) { el.innerHTML = '<div class="empty-msg">評価済みの結果はまだありません</div>'; return; }
-    el.innerHTML = lres.learners.map(l => learnerCard(l)).join('');
+    if (!lres.learners.length) {
+      el.innerHTML = resultsScope === 'facility'
+        ? '<div class="empty-msg">施設内で評価完了済みの症例はまだありません</div>'
+        : '<div class="empty-msg">評価済みの結果はまだありません</div>';
+      return;
+    }
+    el.innerHTML = lres.learners.map(l => learnerCard(l, resultsScope)).join('');
   } catch (e) {
     el.innerHTML = '<div class="empty-msg">接続エラー</div>';
   }
 }
 
-function learnerCard(l) {
+function learnerCard(l, scope) {
   const caseRows = l.records.map(r => {
     const ts_l = r.learnerTS   || {};
     const ts_e = r.evaluatorTS || {};
     const avgL = avgTS(ts_l), avgE = avgTS(ts_e);
     return `<div class="case-row">
-      <div class="case-proc">症例No.${r.caseNo}　${r.procedure}</div>
+      <div class="case-proc">症例No.${r.caseNo}　${r.procedure}　<span style="color:#999;font-size:11px">${fmtDate(r.reviewedAt)}</span>${scope === 'facility' ? `　<span style="color:#999;font-size:11px">担当: ${r.evaluatorName}</span>` : ''}</div>
       <div class="score-chips">
         <span class="sc sc-l" title="学習者 パフォーマンス">P:${PERF_R[r.learnerPerformance]||r.learnerPerformance}</span>
         <span class="sc sc-e" title="指導医 パフォーマンス">P:${PERF_R[r.evaluatorPerformance]||r.evaluatorPerformance}</span>
@@ -422,7 +449,7 @@ function learnerCard(l) {
     <div class="learner-card-header" onclick="toggleLearner(this)">
       <div>
         <div class="learner-name">${l.learnerName}</div>
-        <div class="learner-stats">評価済み ${l.reviewed}件 / 合計 ${l.total}件　${pendingLine}</div>
+        <div class="learner-stats">評価済み ${l.reviewed}件${scope === 'mine' ? ` / 合計 ${l.total}件` : ''}　${pendingLine}</div>
       </div>
       <div class="chevron" id="chev-${l.learnerId}">▼</div>
     </div>
@@ -698,7 +725,7 @@ function renderResultDetail(r) {
   return `
     <div style="background:#f8f9fa;border-radius:10px;padding:13px 15px;margin-bottom:16px;font-size:13px;color:#555;line-height:1.7">
       <strong>症例No.${r.caseNo}</strong>　${r.procedure}<br>
-      学習者: ${r.learnerName}　／　指導医: ${r.evaluatorName}
+      学習者: ${r.learnerName}　／　指導医: ${r.evaluatorName}${r.reviewedAt ? '　／　評価完了日: '+fmtDate(r.reviewedAt) : ''}
     </div>
     ${buildCompareTable(r)}
     <div class="chart-card" style="margin-top:16px;margin-bottom:16px">
@@ -770,6 +797,9 @@ function renderThread(target, recordId) {
 
 function fmtTime(iso) {
   try { const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; } catch { return ''; }
+}
+function fmtDate(iso) {
+  try { const d = new Date(iso); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; } catch { return ''; }
 }
 
 async function postComment(recordId, target) {
