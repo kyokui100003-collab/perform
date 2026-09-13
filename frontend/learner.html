@@ -445,14 +445,18 @@ async function initForm() {
   const c = document.getElementById('formContainer');
   c.innerHTML = '<div class="loading-bar">読み込み中...</div>';
   try {
-    const [evRes, draftRes] = await Promise.all([
-      gasCall({ action:'getEvaluators', facilityCode, userId, pin }),
-      gasCall({ action:'getMyDrafts', facilityCode, userId, pin })
-    ]);
-    if (!evRes.success) { c.innerHTML = `<div class="card"><div class="error-box">${evRes.error}</div></div>`; return; }
-    evaluatorsCache = evRes.evaluators;
-    myDrafts = draftRes.success ? draftRes.drafts : [];
+    // 担当指導医一覧・進行中症例・評価済み結果の3つを1回の呼び出しでまとめて取得する
+    // （以前は3回バラバラに呼んでいたため、往復のオーバーヘッドが3倍かかっていた）
+    const res = await gasCall({ action: 'getLearnerInitialData', facilityCode, userId, pin });
+    if (!res.success) { c.innerHTML = `<div class="card"><div class="error-box">${res.error}</div></div>`; return; }
+    evaluatorsCache = res.evaluators;
+    myDrafts = res.drafts;
+    allResults = res.results;
+    resultsLoaded = true;
     renderCaseList();
+    renderResultList();
+    renderChartSection();
+    updateNewResultsBadge();
   } catch { c.innerHTML = `<div class="card"><div class="error-box">接続エラー。ネットワークを確認してください。</div></div>`; }
 }
 
@@ -1394,8 +1398,7 @@ window.__freshProcedure = null;
 window.__freshNcdCode = null;
 window.__freshEvaluatorId = null;
 
-initForm();
-loadResults(); resultsLoaded = true; // ログイン直後からNEWバッジの件数が見えるよう先に読み込んでおく
+initForm(); // 担当指導医一覧・進行中症例・評価済み結果（NEWバッジ含む）をまとめて取得する
 </script>
 </body>
 </html>
