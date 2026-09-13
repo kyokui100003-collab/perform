@@ -251,7 +251,7 @@
   </div>
 </div>
 
-<script src="procedures-data.js"></script>
+<script src="procedures-index.js"></script>
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxEv9821OOSjC4Hi8yZdnh2Cn6NG-8topX-j4MhiKUZ-sXHd3GPvZs8PSydl_yAsu4lvQ/exec';
 
@@ -272,14 +272,32 @@ document.getElementById('headerInfo').innerHTML =
 
 const DEMO_MODE = GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE';
 
-// 術式リスト：procedures-data.js の NCD_PROCEDURES（診療科→臓器→術式→小分類・方法・NCDコード）を使用。
+// 術式リスト：procedures-index.js の NCD_INDEX（診療科名・信頼度・件数だけを持つ軽量索引）を使用。
+// 実データ（procedures/<slug>.json）は、診療科が選択されたタイミングで初めてfetchし、
+// NCD_PROCEDURESにキャッシュする（毎回ページ最初に全科ぶん読み込むと重いため）。
 // 候補にない術式・診療科は「その他（自由入力）」から入力できる。
 function buildDeptOptions() {
-  return Object.keys(NCD_PROCEDURES).map(d => `<option value="${d}">${d}</option>`).join('')
+  return Object.keys(NCD_INDEX).map(d => `<option value="${d}">${d}</option>`).join('')
     + `<option value="__other_dept__">その他（上記にない診療科）</option>`;
 }
 
-// 一般的な呼び方と術式名の対応（例：「大腸」で検索しても結腸・直腸系の術式がヒットするように）。
+// 診療科の実データを取得する。一度取得した科はNCD_PROCEDURESにキャッシュされ、
+// 2回目以降の選択ではfetchし直さない。
+async function loadDeptData(dept) {
+  if (NCD_PROCEDURES[dept]) return NCD_PROCEDURES[dept];
+  const info = NCD_INDEX[dept];
+  if (!info) return null;
+  try {
+    const res = await fetch(`procedures/${info.slug}.json`);
+    const procedures = await res.json();
+    NCD_PROCEDURES[dept] = { reliability: info.reliability, procedures };
+  } catch (e) {
+    NCD_PROCEDURES[dept] = { reliability: info.reliability, procedures: [] };
+  }
+  return NCD_PROCEDURES[dept];
+}
+
+// 一般的な呼び方と術式名の対応(例：「大腸」で検索しても結腸・直腸系の術式がヒットするように）。
 // 検索欄はここに登録した見出し語だけでなく、術式名・臓器名への部分一致も常に見る。
 const PROC_SEARCH_SYNONYMS = {
   '大腸':   ['結腸', '直腸', '盲腸', '虫垂'],
@@ -475,7 +493,8 @@ function renderStartCase() {
         <select id="newOrgan" onchange="onOrganChange()"></select>
       </div>
       <label>術式 <span class="required">*</span></label>
-      <input type="text" id="procSearchInput" placeholder="術式名で検索（入力すると絞り込まれます）" oninput="filterProcedureOptions()" disabled style="margin-bottom:6px">
+      <div id="procCountHint" style="display:none;font-size:11.5px;color:#1d8a80;background:#f0faf4;border:1px solid #9ae6b4;border-radius:6px;padding:6px 10px;margin-bottom:6px"></div>
+      <input type="text" id="procSearchInput" placeholder="術式名で検索（例：胆嚢、右半、TUL など）" oninput="filterProcedureOptions()" disabled style="margin-bottom:6px;font-size:15px;padding:11px 12px;border-width:1.5px">
       <select id="newProcedure" onchange="onProcedureChange()" disabled><option value="">まず診療科を選択してください</option></select>
       <div id="subcatField" style="display:none">
         <label>術式の分類</label>
@@ -508,31 +527,42 @@ function renderStartCase() {
     </div>`;
 
   // 登録済みの自分の診療科があれば初期選択しておく（あくまで候補、変更可）
-  if (department && NCD_PROCEDURES[department]) {
+  if (department && NCD_INDEX[department]) {
     document.getElementById('newDept').value = department;
     onDeptChange();
   }
 }
 
-function onDeptChange() {
+async function onDeptChange() {
   const dept = document.getElementById('newDept').value;
   const procSel = document.getElementById('newProcedure');
   const searchInput = document.getElementById('procSearchInput');
   const organField = document.getElementById('organField');
   const organSel = document.getElementById('newOrgan');
+  const countHint = document.getElementById('procCountHint');
   searchInput.value = '';
 
   if (!dept) {
     procSel.innerHTML = '<option value="">まず診療科を選択してください</option>';
     procSel.disabled = true; searchInput.disabled = true;
     organField.style.display = 'none'; organSel.innerHTML = '';
+    countHint.style.display = 'none';
   } else if (dept === '__other_dept__') {
     // 診療科自体がリストにない場合：術式選択を飛ばして自由記載欄を直接表示
     procSel.innerHTML = '<option value="__custom__">その他（自由入力）</option>';
     procSel.value = '__custom__';
     procSel.disabled = true; searchInput.disabled = true;
     organField.style.display = 'none'; organSel.innerHTML = '';
+    countHint.style.display = 'none';
   } else {
+    // この科のデータをまだ取得していなければ、ここで読み込む（軽量化のため診療科ごとに分割している）
+    if (!NCD_PROCEDURES[dept]) {
+      procSel.innerHTML = '<option value="">読み込み中...</option>';
+      procSel.disabled = true; searchInput.disabled = true;
+      organField.style.display = 'none';
+      await loadDeptData(dept);
+    }
+
     const organs = organsForDept(dept);
     if (organs.length) {
       organSel.innerHTML = '<option value="">すべて表示</option>' + organs.map(o => `<option value="${o}">${o}</option>`).join('');
@@ -542,6 +572,15 @@ function onDeptChange() {
     }
     procSel.innerHTML = '<option value="">術式を選択...</option>' + buildProcedureOptionsForDept(dept, '', '');
     procSel.disabled = false; searchInput.disabled = false;
+
+    // 術式数が多い科では、一覧をスクロールするより検索した方が早いことを伝える
+    const total = NCD_PROCEDURES[dept].procedures.length;
+    if (total > 20) {
+      countHint.style.display = 'block';
+      countHint.textContent = `${dept}には${total}件の術式があります。上の検索欄に名称の一部（例：「胆嚢」「右半」など）を入力すると絞り込めます。`;
+    } else {
+      countHint.style.display = 'none';
+    }
   }
   onProcedureChange();
 }
