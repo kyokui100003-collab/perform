@@ -486,23 +486,33 @@ function renderStartCase() {
     <button class="text-link-btn" onclick="renderCaseList()">‹ 症例一覧に戻る</button>
     <div class="card" style="margin-top:10px">
       <div class="card-title">基本情報</div>
-      <label>診療科 <span class="required">*</span></label>
-      <select id="newDept" onchange="onDeptChange()"><option value="">診療科を選択...</option>${buildDeptOptions()}</select>
-      <div id="organField" style="display:none">
-        <label>臓器</label>
-        <select id="newOrgan" onchange="onOrganChange()"></select>
+      <div id="quickPickArea" style="margin-bottom:4px"></div>
+      <div id="quickPickSelected" style="display:none;background:#f0faf4;border:1.5px solid #9ae6b4;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px">
+        選択中の術式：<strong id="quickPickSelectedText"></strong>
+        <button type="button" onclick="clearQuickPick()" style="margin-left:8px;font-size:11.5px;color:#2ab5a8;background:none;border:none;text-decoration:underline;cursor:pointer">変更する</button>
       </div>
-      <label>術式 <span class="required">*</span></label>
-      <div id="procCountHint" style="display:none;font-size:11.5px;color:#1d8a80;background:#f0faf4;border:1px solid #9ae6b4;border-radius:6px;padding:6px 10px;margin-bottom:6px"></div>
-      <input type="text" id="procSearchInput" placeholder="術式名で検索（例：胆嚢、右半、TUL など）" oninput="filterProcedureOptions()" disabled style="margin-bottom:6px;font-size:15px;padding:11px 12px;border-width:1.5px">
-      <select id="newProcedure" onchange="onProcedureChange()" disabled><option value="">まず診療科を選択してください</option></select>
-      <div id="subcatField" style="display:none">
-        <label>術式の分類</label>
-        <select id="newSubcat" onchange="onSubcatOrMethodChange()"></select>
+      <div id="normalProcFields">
+        <label>診療科 <span class="required">*</span></label>
+        <select id="newDept" onchange="onDeptChange()"><option value="">診療科を選択...</option>${buildDeptOptions()}</select>
+        <div id="organField" style="display:none">
+          <label>臓器</label>
+          <select id="newOrgan" onchange="onOrganChange()"></select>
+        </div>
+        <label>術式 <span class="required">*</span></label>
+        <div id="procCountHint" style="display:none;font-size:11.5px;color:#1d8a80;background:#f0faf4;border:1px solid #9ae6b4;border-radius:6px;padding:6px 10px;margin-bottom:6px"></div>
+        <input type="text" id="procSearchInput" placeholder="術式名で検索（例：胆嚢、右半、TUL など）" oninput="filterProcedureOptions()" disabled style="margin-bottom:6px;font-size:15px;padding:11px 12px;border-width:1.5px">
+        <select id="newProcedure" onchange="onProcedureChange()" disabled><option value="">まず診療科を選択してください</option></select>
+        <div id="subcatField" style="display:none">
+          <label>術式の分類</label>
+          <select id="newSubcat" onchange="onSubcatOrMethodChange()"></select>
+        </div>
+        <div id="methodField" style="display:none">
+          <label>方法・アプローチ</label>
+          <select id="newMethod" onchange="onSubcatOrMethodChange()"></select>
+        </div>
       </div>
-      <div id="methodField" style="display:none">
-        <label>方法・アプローチ</label>
-        <select id="newMethod" onchange="onSubcatOrMethodChange()"></select>
+      <div style="margin:2px 0 12px">
+        <a href="#" id="freeInputToggle" onclick="toggleFreeInput(); return false;" style="font-size:12.5px;color:#2ab5a8;text-decoration:underline">この一覧にない術式は自由入力する</a>
       </div>
       <div id="customProcedureField" style="display:none">
         <label>術式名を入力 <span class="required">*</span></label>
@@ -531,6 +541,7 @@ function renderStartCase() {
     document.getElementById('newDept').value = department;
     onDeptChange();
   }
+  renderQuickPicks();
 }
 
 async function onDeptChange() {
@@ -649,6 +660,78 @@ function onProcedureChange() {
 // 変わるので、前回の目標チェックをここでもやり直す
 function onSubcatOrMethodChange() { checkPreviousGoal(); }
 
+// 「よく使う・最近使った術式」のクイック選択機能。診療科→臓器→術式と毎回たどらなくても、
+// 過去に自分が入力した術式（進行中の下書き＋評価済みの結果）から、件数が多い順・新しい順に
+// 上位いくつかをボタンとして出す。押すと即座にその術式名で確定する（NCDコードは空になる＝
+// 一覧から選び直した場合に比べて解析用の紐付けは失われるが、入力の速さを優先する機能のため許容）。
+window.__quickPick = null;
+let freeInputMode = false;
+
+function recentProcedureChips() {
+  const seen = new Map();
+  const consider = (text, at) => {
+    if (!text) return;
+    const cur = seen.get(text) || { count: 0, lastAt: 0 };
+    cur.count++;
+    const t = new Date(at).getTime() || 0;
+    if (t > cur.lastAt) cur.lastAt = t;
+    seen.set(text, cur);
+  };
+  (myDrafts || []).forEach(d => consider(d.procedure, d.createdAt));
+  (allResults || []).forEach(r => consider(r.procedure, r.reviewedAt));
+  const arr = [...seen.entries()].map(([text, info]) => ({ text, ...info }));
+  arr.sort((a, b) => (b.count - a.count) || (b.lastAt - a.lastAt));
+  return arr.slice(0, 6);
+}
+
+function renderQuickPicks() {
+  const area = document.getElementById('quickPickArea');
+  if (!area) return;
+  const chips = recentProcedureChips();
+  if (!chips.length) { area.innerHTML = ''; return; }
+  area.innerHTML = `<div style="font-size:11.5px;color:#888;margin-bottom:6px">よく使う・最近使った術式</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+      ${chips.map(c => `<button type="button" onclick='pickQuickProcedure(${JSON.stringify(c.text)})' style="padding:6px 12px;border:1.5px solid #2ab5a8;border-radius:99px;background:white;color:#2ab5a8;font-size:12.5px;cursor:pointer">${escapeHtml(c.text)}</button>`).join('')}
+    </div>`;
+}
+
+function pickQuickProcedure(text) {
+  window.__quickPick = { text, ncdCode: '' };
+  document.getElementById('quickPickSelected').style.display = 'block';
+  document.getElementById('quickPickSelectedText').textContent = text;
+  document.getElementById('normalProcFields').style.display = 'none';
+  document.getElementById('customProcedureField').style.display = 'none';
+  document.getElementById('freeInputToggle').style.display = 'none';
+  checkPreviousGoal();
+}
+
+function clearQuickPick() {
+  window.__quickPick = null;
+  document.getElementById('quickPickSelected').style.display = 'none';
+  document.getElementById('normalProcFields').style.display = 'block';
+  document.getElementById('freeInputToggle').style.display = 'inline';
+  checkPreviousGoal();
+}
+
+// 一覧から選ばず、最初から術式名を自由入力するモード。診療科の一覧が長い科でも、
+// 探す手間なくすぐに入力を始められるようにするための常設の抜け道。
+function toggleFreeInput() {
+  freeInputMode = !freeInputMode;
+  const toggle = document.getElementById('freeInputToggle');
+  const normalFields = document.getElementById('normalProcFields');
+  const customField = document.getElementById('customProcedureField');
+  if (freeInputMode) {
+    normalFields.style.display = 'none';
+    customField.style.display = 'block';
+    toggle.textContent = '← 一覧から選び直す';
+  } else {
+    normalFields.style.display = 'block';
+    customField.style.display = 'none';
+    toggle.textContent = 'この一覧にない術式は自由入力する';
+  }
+  checkPreviousGoal();
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -659,14 +742,22 @@ function escapeHtml(s) {
 function checkPreviousGoal() {
   const hint = document.getElementById('prevGoalHint');
   if (!hint) return;
-  const dept = document.getElementById('newDept').value;
-  const procVal = document.getElementById('newProcedure').value;
-  const isCustom = procVal === '__custom__';
-  const procObj = (!isCustom && NCD_PROCEDURES[dept]) ? NCD_PROCEDURES[dept].procedures.find(p => p.name === procVal) : null;
-  // 小分類・方法まで含めた完全一致ではなく、術式の基本名（例：「胆嚢摘出術」）が含まれているかで
-  // 判定する。小分類・方法が前回と違っていても、また術式名の表記が多少違う過去データ（例：
-  // 「腹腔鏡下胆嚢摘出術」）でも「同じ術式」として拾えるようにするため。
-  const baseName = procObj ? procObj.name : (isCustom ? (document.getElementById('customProcedureInput').value || '').trim() : '');
+
+  let baseName;
+  if (window.__quickPick) {
+    baseName = window.__quickPick.text;
+  } else if (freeInputMode) {
+    baseName = (document.getElementById('customProcedureInput').value || '').trim();
+  } else {
+    const dept = document.getElementById('newDept').value;
+    const procVal = document.getElementById('newProcedure').value;
+    const isCustom = procVal === '__custom__';
+    const procObj = (!isCustom && NCD_PROCEDURES[dept]) ? NCD_PROCEDURES[dept].procedures.find(p => p.name === procVal) : null;
+    // 小分類・方法まで含めた完全一致ではなく、術式の基本名（例：「胆嚢摘出術」）が含まれているかで
+    // 判定する。小分類・方法が前回と違っていても、また術式名の表記が多少違う過去データ（例：
+    // 「腹腔鏡下胆嚢摘出術」）でも「同じ術式」として拾えるようにするため。
+    baseName = procObj ? procObj.name : (isCustom ? (document.getElementById('customProcedureInput').value || '').trim() : '');
+  }
   if (!baseName) { hint.style.display = 'none'; return; }
 
   // 「② 次回の目標・改善点」（評価入力時に書く自己フィードバック）を最優先の候補にする。
@@ -696,8 +787,12 @@ function useThisGoal() {
 }
 
 // 選択内容から最終的な術式文字列とNCDコードを組み立てる。
-// 自由入力（診療科・術式とも）の場合はNCDコードは空文字のまま返す。
+// クイック選択・自由入力の場合はNCDコードは空文字のまま返す。
 function resolveProcedureValue() {
+  if (window.__quickPick) return window.__quickPick;
+  if (freeInputMode) {
+    return { text: (document.getElementById('customProcedureInput').value || '').trim(), ncdCode: '' };
+  }
   const dept = document.getElementById('newDept').value;
   const procVal = document.getElementById('newProcedure').value;
   if (procVal === '__custom__') {
